@@ -3,6 +3,7 @@ name = "gamehail"
 version = "0.1.0"
 description = "Hotkey gaming assistant: push-to-talk / screenshot -> Claude Code headless + game MCP -> TTS + overlay"
 readme = "README.md"
+license = "MIT"
 requires-python = ">=3.11"
 dependencies = [
     "evdev>=1.7",
