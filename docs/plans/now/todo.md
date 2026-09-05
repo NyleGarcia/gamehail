@@ -9,7 +9,7 @@ updated: 2026-09-05
 Verified on this machine: faster-whisper `small.en` runs on CUDA/float16 (RTX 5080), 8.9s cold load.
 
 - [ ] Place the deck keys in OpenDeck and set each one's route
-- [x] Regenerate vocabulary from SCMCP's sc_get_vocabulary (149 generated + 52 hand-picked terms)
+- [x] Regenerate vocabulary from SCMCP's sc_get_vocabulary (658 generated + 52 hand-picked terms: commodities, manufacturers, weapons, attachments, ship components)
 - [ ] "Agricium" still transcribes as "Agrisium" even with vocabulary biasing - try `medium.en` if it recurs
 - [x] Stop hardcoding a local SCMCP path in the shipped module; make gateway vs local a user choice
 - [ ] Wire scripts/vocab/<id>.py for the placeholder games once each gets an MCP server

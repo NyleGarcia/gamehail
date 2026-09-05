@@ -106,10 +106,15 @@ module stays portable between machines.
 `vocabulary_static` is hand-picked and always present - ships, locations, jargon that
 isn't a tradeable item and so nothing can generate it. `vocabulary_generated` is filled
 by `scripts/vocab/<id>.py`, which calls the game's MCP server rather than duplicating
-its data-fetching logic. For Star Citizen that's `sc_get_vocabulary` (SCMCP >= 1.2.0),
+its data-fetching logic. For Star Citizen that's `sc_get_vocabulary` (SCMCP >= 1.4.0),
 itself merging locally extracted names (`SCMCP_GAME_DATA_DIR` - ore signatures,
 blueprints, Wikelo trades: exactly the invented words no public API exposes) with
-tradeable commodity and manufacturer names from UEX/SCW.
+tradeable commodity names, manufacturer names, weapons, weapon attachments and ship
+components from UEX/SCW - 710 terms total (52 hand-picked + 658 generated). Armor and
+clothes are deliberately left out of gamehail's own call: ~4,100 terms, almost entirely
+colour-variant SKUs ("Rating Undersuit - Sand/Black/Red/...") that dilute the prompt
+far more than they help - `sc_get_vocabulary` supports them (`include_armor`,
+`include_clothes`) if you want them anyway.
 
 The precedence is local-first at two levels:
 

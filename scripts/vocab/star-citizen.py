@@ -62,7 +62,15 @@ def fetch_from_mcp(timeout: float = 30.0) -> list[str]:
                    "clientInfo": {"name": "gamehail-vocab-builder", "version": "1"}}},
         {"jsonrpc": "2.0", "method": "notifications/initialized"},
         {"jsonrpc": "2.0", "id": 2, "method": "tools/call",
-         "params": {"name": "sc_get_vocabulary", "arguments": {}}},
+         "params": {"name": "sc_get_vocabulary", "arguments": {
+             # Armor and clothes are left out: ~4,100 terms, almost all colour-variant
+             # SKUs ("Rating Undersuit - Sand/Black/Red/...") nobody asks about by voice.
+             # Weapons, attachments and ship components are things players actually name
+             # mid-game ("what shield should I put on my Connie") and stay a sane size.
+             "include_armor": False,
+             "include_clothes": False,
+             "include_components": True,
+         }}},
     ]
     stdin = "\n".join(json.dumps(r) for r in requests) + "\n"
 
