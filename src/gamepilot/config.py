@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import tomllib
+from copy import deepcopy
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
@@ -42,6 +43,7 @@ class HotkeyConfig:
     # Held = push-to-talk. Tapped = screenshot question (voice follows if held).
     ask_voice: str = "KEY_F13"
     ask_screen: str = "KEY_F14"
+    ask_broadcast: str = "KEY_F16"
     cancel: str = "KEY_F15"
     devices: list[str] = field(default_factory=list)  # empty = autodetect
     min_hold_ms: int = 150
@@ -49,6 +51,7 @@ class HotkeyConfig:
 
 @dataclass
 class SttConfig:
+    input_device: str = ""  # PortAudio device name (empty = system default)
     model: str = "small.en"
     device: str = "auto"  # auto | cuda | cpu
     compute_type: str = "auto"
@@ -58,14 +61,49 @@ class SttConfig:
 
 
 @dataclass
+class TtsChannel:
+    """One audio destination for spoken answers.
+
+    `target` is a PipeWire sink node name ("default" for whatever you are listening
+    to); `app_name` is the application.name the stream carries, which is what
+    OpenWave binds an app source row to.
+    """
+
+    name: str = "me"
+    target: str = "default"
+    app_name: str = "gamepilot"
+    volume: float = 1.0
+    voice_model: Path | None = None  # overrides TtsConfig.voice_model
+    enabled: bool = True
+
+
+def _default_channels() -> list[TtsChannel]:
+    return [
+        TtsChannel(name="me", target="default", app_name="gamepilot"),
+        TtsChannel(
+            name="squad", target="openwave_chat_mix", app_name="gamepilot-squad",
+            enabled=False,
+        ),
+    ]
+
+
+def _default_routes() -> dict[str, list[str]]:
+    return {
+        "ask_voice": ["me"],
+        "ask_screen": ["me"],
+        "ask_broadcast": ["me", "squad"],
+    }
+
+
+@dataclass
 class TtsConfig:
     enabled: bool = True
-    voice_model: Path | None = None  # path to a piper .onnx
+    voice_model: Path | None = None  # path to a piper .onnx (per-channel overridable)
     speaker: int | None = None
     length_scale: float | None = None
-    player: list[str] = field(
-        default_factory=lambda: ["aplay", "-q", "-r", "22050", "-f", "S16_LE", "-t", "raw", "-c", "1"]
-    )
+    player: str = "pw-play"  # "pw-play" (routable) or "aplay" (default sink only)
+    channels: list[TtsChannel] = field(default_factory=_default_channels)
+    routes: dict[str, list[str]] = field(default_factory=_default_routes)
 
 
 @dataclass
@@ -88,7 +126,14 @@ class OverlayConfig:
 
 
 @dataclass
+class UiConfig:
+    tray: bool = True
+    show_answers_in_tray: bool = True
+
+
+@dataclass
 class Config:
+    path: Path | None = None
     profile: str = "default"
     backend: BackendConfig = field(default_factory=BackendConfig)
     hotkeys: HotkeyConfig = field(default_factory=HotkeyConfig)
@@ -96,6 +141,7 @@ class Config:
     tts: TtsConfig = field(default_factory=TtsConfig)
     screen: ScreenConfig = field(default_factory=ScreenConfig)
     overlay: OverlayConfig = field(default_factory=OverlayConfig)
+    ui: UiConfig = field(default_factory=UiConfig)
     work_dir: Path = Path("/tmp/gamepilot")
 
 
@@ -115,9 +161,33 @@ def _coerce(section: str, data: dict[str, Any]) -> dict[str, Any]:
             out["mcp_config"] = _expand(out["mcp_config"])
         if "add_dirs" in out:
             out["add_dirs"] = [Path(p).expanduser() for p in out["add_dirs"]]
-    if section == "tts" and "voice_model" in out:
-        out["voice_model"] = _expand(out["voice_model"])
+    if section == "tts":
+        if "voice_model" in out:
+            out["voice_model"] = _expand(out["voice_model"])
+        if "channels" in out:
+            out["channels"] = [
+                TtsChannel(**{**ch, "voice_model": _expand(ch.get("voice_model"))})
+                for ch in out["channels"]
+            ]
+        if "routes" in out:
+            out["routes"] = {k: list(v) for k, v in out["routes"].items()}
     return out
+
+
+def local_path_for(path: Path) -> Path:
+    """UI-managed settings live beside the config as `<name>.local.toml`.
+
+    Writing them separately keeps the hand-written file - and its comments - intact,
+    since a TOML round-trip through a writer would drop every comment in it.
+    """
+    return path.with_name(f"{path.stem}.local{path.suffix}")
+
+
+def _profile_layer(raw: dict[str, Any], profile: str) -> dict[str, Any]:
+    table = raw.get("profiles", {})
+    if isinstance(table, dict) and isinstance(table.get(profile), dict):
+        return table[profile]
+    return {}
 
 
 def load(path: Path | None = None, profile: str | None = None) -> Config:
@@ -126,15 +196,23 @@ def load(path: Path | None = None, profile: str | None = None) -> Config:
     if path.is_file():
         raw = tomllib.loads(path.read_text())
 
-    profile = profile or raw.get("profile") or "default"
-    layers = [raw]
-    prof_table = raw.get("profile_", raw.get("profiles", {}))
-    if isinstance(prof_table, dict) and profile in prof_table:
-        layers.append(prof_table[profile])
+    local_path = local_path_for(path)
+    local: dict[str, Any] = {}
+    if local_path.is_file():
+        local = tomllib.loads(local_path.read_text())
 
-    cfg = Config(profile=profile)
+    profile = profile or local.get("profile") or raw.get("profile") or "default"
+    # Later layers win: file, its profile, then the UI-managed overlay and its profile.
+    layers = [
+        raw,
+        _profile_layer(raw, profile),
+        local,
+        _profile_layer(local, profile),
+    ]
+
+    cfg = Config(path=path, profile=profile)
     for layer in layers:
-        for section in ("backend", "hotkeys", "stt", "tts", "screen", "overlay"):
+        for section in ("backend", "hotkeys", "stt", "tts", "screen", "overlay", "ui"):
             if section in layer:
                 setattr(cfg, section, _merge(getattr(cfg, section), _coerce(section, layer[section])))
         if "work_dir" in layer:
@@ -144,3 +222,34 @@ def load(path: Path | None = None, profile: str | None = None) -> Config:
     if cfg.work_dir not in cfg.backend.add_dirs:
         cfg.backend.add_dirs.append(cfg.work_dir)
     return cfg
+
+
+# -- writing back ----------------------------------------------------------------
+
+
+def _deep_merge(base: dict[str, Any], patch: dict[str, Any]) -> dict[str, Any]:
+    out = deepcopy(base)
+    for key, value in patch.items():
+        if isinstance(value, dict) and isinstance(out.get(key), dict):
+            out[key] = _deep_merge(out[key], value)
+        else:
+            out[key] = value
+    return out
+
+
+def save_patch(patch: dict[str, Any], path: Path | None = None) -> Path:
+    """Merge `patch` into the UI-managed overlay file, leaving the main config alone.
+
+    The overlay is loaded after the main file and after its profile table, so what the
+    settings window writes is what takes effect.
+    """
+    import tomli_w
+
+    path = local_path_for(path or DEFAULT_CONFIG_PATH)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    current = tomllib.loads(path.read_text()) if path.is_file() else {}
+    merged = _deep_merge(current, patch)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(tomli_w.dumps(merged))
+    tmp.replace(path)
+    return path

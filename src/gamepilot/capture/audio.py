@@ -17,8 +17,10 @@ class Recorder:
     callback thread, so the buffer list is guarded by a lock.
     """
 
-    def __init__(self, samplerate: int = 16000, max_seconds: float = 30.0):
+    def __init__(self, samplerate: int = 16000, max_seconds: float = 30.0,
+                 device: str | int | None = None):
         self.samplerate = samplerate
+        self.device = device or None
         self.max_frames = int(samplerate * max_seconds)
         self._frames: list[np.ndarray] = []
         self._lock = threading.Lock()
@@ -39,7 +41,8 @@ class Recorder:
                 self._frames.append(indata.copy())
 
         self._stream = sd.InputStream(
-            samplerate=self.samplerate, channels=1, dtype="float32", callback=cb
+            samplerate=self.samplerate, channels=1, dtype="float32", callback=cb,
+            device=self.device,
         )
         self._stream.start()
 
@@ -60,3 +63,17 @@ class Recorder:
     @property
     def active(self) -> bool:
         return self._stream is not None
+
+
+def input_devices() -> list[str]:
+    """Names of every capture-capable device PortAudio can see."""
+    try:
+        import sounddevice as sd
+
+        return [
+            d["name"] for d in sd.query_devices()
+            if d.get("max_input_channels", 0) > 0
+        ]
+    except Exception as exc:  # noqa: BLE001 - audio stack may be absent
+        log.warning("could not enumerate input devices: %s", exc)
+        return []

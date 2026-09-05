@@ -9,8 +9,6 @@ overlay to be visible on top of it.
 from __future__ import annotations
 
 import logging
-from queue import Empty, Queue
-
 from PyQt6 import QtCore, QtGui, QtWidgets
 
 from .config import OverlayConfig
@@ -26,9 +24,9 @@ STYLE = """
 
 
 class Overlay(QtWidgets.QWidget):
-    """Polls an event queue on the Qt thread; workers never touch widgets directly."""
+    """Renders pipeline events. Driven by the UI dispatcher, never by worker threads."""
 
-    def __init__(self, cfg: OverlayConfig, events: Queue):
+    def __init__(self, cfg: OverlayConfig):
         super().__init__(
             None,
             QtCore.Qt.WindowType.FramelessWindowHint
@@ -36,7 +34,6 @@ class Overlay(QtWidgets.QWidget):
             | QtCore.Qt.WindowType.Tool,
         )
         self.cfg = cfg
-        self.events = events
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_ShowWithoutActivating)
         self.setWindowOpacity(cfg.opacity)
@@ -68,10 +65,6 @@ class Overlay(QtWidgets.QWidget):
         self._hide_timer.setSingleShot(True)
         self._hide_timer.timeout.connect(self.hide)
 
-        self._poll = QtCore.QTimer(self)
-        self._poll.timeout.connect(self._drain)
-        self._poll.start(50)
-
     # -- placement ---------------------------------------------------------
     def _place(self) -> None:
         screen = QtGui.QGuiApplication.primaryScreen()
@@ -85,24 +78,17 @@ class Overlay(QtWidgets.QWidget):
         y = area.top() + m if "top" in self.cfg.corner else area.bottom() - h - m
         self.move(x, y)
 
-    # -- event pump --------------------------------------------------------
-    def _drain(self) -> None:
-        while True:
-            try:
-                kind, payload = self.events.get_nowait()
-            except Empty:
-                return
-            if kind == "status":
-                self.show_status(payload)
-            elif kind == "append":
-                self.body.setText(self.body.text() + payload)
-                self._place()
-            elif kind == "answer":
-                self.show_answer(payload)
-            elif kind == "hide":
-                self.hide()
-            elif kind == "quit":
-                QtWidgets.QApplication.quit()
+    # -- events ------------------------------------------------------------
+    def handle(self, kind: str, payload: str) -> None:
+        if kind == "status":
+            self.show_status(payload)
+        elif kind == "append":
+            self.body.setText(self.body.text() + payload)
+            self._place()
+        elif kind == "answer":
+            self.show_answer(payload)
+        elif kind == "hide":
+            self.hide()
 
     def show_status(self, text: str) -> None:
         self._hide_timer.stop()
@@ -119,10 +105,3 @@ class Overlay(QtWidgets.QWidget):
         self.show()
         if self.cfg.hide_after_s > 0:
             self._hide_timer.start(int(self.cfg.hide_after_s * 1000))
-
-
-def run_qt(cfg: OverlayConfig, events: Queue) -> int:
-    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
-    overlay = Overlay(cfg, events)
-    overlay.hide()
-    return app.exec()

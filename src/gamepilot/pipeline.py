@@ -24,7 +24,7 @@ class Pipeline:
         self.cfg = cfg
         self.events = events or Queue()
         self.backend = make_backend(cfg.backend)
-        self.recorder = Recorder(cfg.stt.samplerate, cfg.stt.max_seconds)
+        self.recorder = Recorder(cfg.stt.samplerate, cfg.stt.max_seconds, cfg.stt.input_device)
         self.transcriber = Transcriber(cfg.stt)
         self.speaker = Speaker(cfg.tts)
         self.shots = Screenshotter(cfg.screen, cfg.work_dir)
@@ -53,6 +53,8 @@ class Pipeline:
                 # Grab the frame at press time - the moment the user asked about.
                 self._pending_shot = self.shots.capture()
                 self._emit("status", "listening (screenshot captured)")
+            elif action == "ask_broadcast":
+                self._emit("status", "listening (answer goes to the squad)")
             else:
                 self._emit("status", "listening")
             self.speaker.cancel()
@@ -69,11 +71,15 @@ class Pipeline:
         shot = self._pending_shot
         self._pending_shot = None
         threading.Thread(
-            target=self._handle, args=(audio, shot), name="query", daemon=True
+            target=self._handle, args=(audio, shot, action), name="query", daemon=True
         ).start()
 
     # -- query --------------------------------------------------------------
-    def _handle(self, audio, shot: Path | None) -> None:
+    def route_for(self, action: str) -> list[str]:
+        """Which audio channels an answer to this hotkey is spoken on."""
+        return self.cfg.tts.routes.get(action, ["me"])
+
+    def _handle(self, audio, shot: Path | None, action: str = "ask_voice") -> None:
         if not self._busy.acquire(blocking=False):
             log.info("dropping query: one already in flight")
             return
@@ -90,15 +96,23 @@ class Pipeline:
                 return
 
             log.info("Q: %s", question)
+            route = self.route_for(action)
             self._emit("status", f"» {question}")
-            self.ask(question, [shot] if shot else None)
+            self.ask(question, [shot] if shot else None, channels=route)
         finally:
             self._busy.release()
             self.shots.prune()
 
-    def ask(self, question: str, images: list[Path] | None = None) -> str:
+    def ask(
+        self,
+        question: str,
+        images: list[Path] | None = None,
+        channels: list[str] | None = None,
+    ) -> str:
         """Run one question through the backend, streaming to speech and overlay."""
         answer: list[str] = []
+        route = channels or self.route_for("ask_voice")
+        self.speaker.begin(route)
         self._emit("answer", "")
         started = time.monotonic()
         for chunk in self.backend.ask(question, images):
@@ -109,7 +123,7 @@ class Pipeline:
             if chunk.final:
                 self.speaker.flush()
         text = "".join(answer).strip()
-        log.info("A (%.1fs): %s", time.monotonic() - started, text)
+        log.info("A (%.1fs, -> %s): %s", time.monotonic() - started, ",".join(route), text)
         if not text:
             self._emit("answer", "no answer")
         return text

@@ -28,10 +28,16 @@ class HotkeyListener:
         self.handler = handler
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
+        # An empty key name disables that action.
         self._keymap = {
-            cfg.ask_voice: "ask_voice",
-            cfg.ask_screen: "ask_screen",
-            cfg.cancel: "cancel",
+            key: action
+            for key, action in (
+                (cfg.ask_voice, "ask_voice"),
+                (cfg.ask_screen, "ask_screen"),
+                (cfg.ask_broadcast, "ask_broadcast"),
+                (cfg.cancel, "cancel"),
+            )
+            if key
         }
 
     # -- device discovery --------------------------------------------------

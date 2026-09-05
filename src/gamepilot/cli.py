@@ -33,6 +33,8 @@ def _load(args) -> config.Config:
 
 def cmd_run(args) -> int:
     cfg = _load(args)
+    if getattr(args, "no_tray", False):
+        cfg.ui.tray = False
     events: Queue = Queue()
     pipe = Pipeline(cfg, events)
 
@@ -56,10 +58,10 @@ def cmd_run(args) -> int:
     signal.signal(signal.SIGTERM, shutdown)
 
     try:
-        if cfg.overlay.enabled:
-            from .overlay import run_qt
+        if cfg.overlay.enabled or cfg.ui.tray:
+            from .ui.app import run_ui
 
-            return run_qt(cfg.overlay, events)
+            return run_ui(cfg, events, pipe)
         while True:  # headless: drain events so the queue cannot grow unbounded
             kind, payload = events.get()
             if kind == "quit":
@@ -79,11 +81,77 @@ def cmd_ask(args) -> int:
     pipe = Pipeline(cfg)
     try:
         images = [Path(p) for p in (args.image or [])]
-        answer = pipe.ask(" ".join(args.question), images or None)
+        channels = args.channel or (pipe.route_for("ask_broadcast") if args.broadcast else None)
+        answer = pipe.ask(" ".join(args.question), images or None, channels=channels)
         print(answer)
         return 0 if answer else 1
     finally:
         pipe.close()
+
+
+def cmd_channels(args) -> int:
+    """Show the configured audio channels and the PipeWire sinks they can target."""
+    import subprocess
+
+    cfg = _load(args)
+    sinks = set()
+    try:
+        out = subprocess.run(
+            ["pactl", "list", "short", "sinks"], capture_output=True, text=True, timeout=10
+        ).stdout
+        sinks = {line.split("\t")[1] for line in out.splitlines() if "\t" in line}
+    except (OSError, subprocess.SubprocessError, IndexError):
+        pass
+
+    print(f"player: {cfg.tts.player}")
+    print("channels:")
+    for ch in cfg.tts.channels:
+        voice = ch.voice_model or cfg.tts.voice_model
+        state = "on " if ch.enabled else "off"
+        known = "" if ch.target in sinks or ch.target == "default" else "  [sink not found]"
+        print(f"  {state} {ch.name:<10} -> {ch.target:<24} app={ch.app_name} "
+              f"vol={ch.volume}{known}")
+        if ch.voice_model:
+            print(f"      voice: {voice}")
+    print("routes:")
+    for action, names in cfg.tts.routes.items():
+        print(f"  {action:<14} -> {', '.join(names)}")
+    if sinks:
+        print("available sinks:")
+        for name in sorted(sinks):
+            print(f"  {name}")
+    return 0
+
+
+def cmd_say(args) -> int:
+    """Speak a phrase on the given channels - use it to check the routing."""
+    cfg = _load(args)
+    from .tts import Speaker
+
+    speaker = Speaker(cfg.tts)
+    if not speaker.available:
+        print("tts unavailable: check piper is installed and a voice model exists",
+              file=sys.stderr)
+        return 1
+    route = args.channel or list(cfg.tts.routes.get("ask_broadcast", ["me"]))
+    speaker.begin(route)
+    speaker.feed(" ".join(args.text))
+    speaker.flush()
+    print(f"speaking on: {', '.join(route)}")
+    import time
+
+    while not speaker._queue.empty() or speaker._procs:
+        time.sleep(0.1)
+    time.sleep(0.5)
+    speaker.close()
+    return 0
+
+
+def cmd_settings(args) -> int:
+    """Open the settings window without starting the daemon."""
+    from .ui.app import run_settings
+
+    return run_settings(_load(args))
 
 
 def cmd_devices(_args) -> int:
@@ -135,14 +203,34 @@ def main(argv: list[str] | None = None) -> int:
     p_run = sub.add_parser("run", help="start the hotkey daemon")
     _common(p_run)
     p_run.add_argument("--no-warmup", action="store_true", help="skip preloading the STT model")
+    p_run.add_argument("--no-tray", action="store_true", help="run without the tray icon")
     p_run.set_defaults(func=cmd_run)
 
     p_ask = sub.add_parser("ask", help="ask one typed question (no mic)")
     _common(p_ask)
     p_ask.add_argument("question", nargs="+")
     p_ask.add_argument("--image", action="append", help="attach an image path (repeatable)")
+    p_ask.add_argument("--channel", action="append",
+                       help="speak on this audio channel (repeatable; default: the "
+                            "ask_voice route)")
+    p_ask.add_argument("--broadcast", action="store_true",
+                       help="use the ask_broadcast route (you + the squad)")
     p_ask.add_argument("--no-tts", action="store_true")
     p_ask.set_defaults(func=cmd_ask)
+
+    p_chan = sub.add_parser("channels", help="show audio channels, routes and sinks")
+    _common(p_chan)
+    p_chan.set_defaults(func=cmd_channels)
+
+    p_say = sub.add_parser("say", help="speak a test phrase on given channels")
+    _common(p_say)
+    p_say.add_argument("text", nargs="+")
+    p_say.add_argument("--channel", action="append", help="channel name (repeatable)")
+    p_say.set_defaults(func=cmd_say)
+
+    p_set = sub.add_parser("settings", help="open the settings window")
+    _common(p_set)
+    p_set.set_defaults(func=cmd_settings)
 
     p_dev = sub.add_parser("devices", help="list input devices")
     p_dev.set_defaults(func=cmd_devices)

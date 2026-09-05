@@ -10,4 +10,7 @@ Verified on this machine: faster-whisper `small.en` runs on CUDA/float16 (RTX 50
 
 - [ ] Bind real keys and confirm `gamepilot keys` sees them under the game
 - [ ] Confirm the KWin rule keeps the overlay above Star Citizen in borderless mode
+- [ ] Decide whether `me` should target `openwave_personal_mix` explicitly rather than the default sink
+- [ ] Add the gamepilot / gamepilot-squad app sources in OpenWave to get per-mix levels
+- [ ] Rebind hotkeys from the settings window instead of the config file
 - [ ] Tune the Star Citizen system prompt against real in-flight questions

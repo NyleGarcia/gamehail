@@ -8,8 +8,9 @@ No API key, no per-token bill: it drives the `claude` CLI, so it runs on your ex
 Claude Code subscription.
 
 ```
-  hold KEY_F13 ──► mic ──► whisper ──► claude -p (+ game MCP) ──► piper TTS
-  tap  KEY_F14 ──► screenshot ──┘                            └─► Qt overlay
+  hold KEY_F13 ──► mic ──► whisper ──► claude -p (+ game MCP) ──┬─► piper ──► "me"    (your headset)
+  hold KEY_F14 ──► + screenshot ──┘                             ├─► piper ──► "squad" (OpenWave Chat Mix ──► Discord)
+  hold KEY_F16 ──► answer goes to both                          └─► Qt overlay
 ```
 
 ## Two backend modes
@@ -54,14 +55,56 @@ Autostart: `cp scripts/gamepilot.service ~/.config/systemd/user/ && systemctl --
 
 | key | action |
 |---|---|
-| `KEY_F13` | hold to talk |
+| `KEY_F13` | hold to talk — answer spoken to you only |
 | `KEY_F14` | hold to talk **+** screenshot the game window on key-down |
+| `KEY_F16` | hold to talk — answer spoken to you **and** out over voice comms |
 | `KEY_F15` | cancel speech / hide overlay |
+
+Your VIRPIL sticks are evdev devices too, so `ask_voice = "BTN_TRIGGER_HAPPY5"` binds
+push-to-talk to a HOTAS button instead of a keyboard key.
 
 Hotkeys are read from `/dev/input` rather than registered with KDE, because KDE
 shortcuts fire only on press (no hold-to-talk) and Wayland has no client-side global
 grab. The devices are read, never grabbed, so the game still sees the keys — bind
 gamepilot to keys the game does not use.
+
+## Two audio channels
+
+Answers can be spoken to more than one destination. Each channel is a PipeWire sink
+plus the `application.name` the stream carries:
+
+| channel | target | who hears it |
+|---|---|---|
+| `me` | `default` (or `openwave_personal_mix`) | you |
+| `squad` | `openwave_chat_mix` | everyone on voice comms — Discord captures Monitor of OpenWave Chat Mix |
+
+`[tts.routes]` decides which hotkey speaks where, so private questions stay private and
+`KEY_F16` answers out loud to the group. Give each channel its own `app_name` and
+OpenWave can bind it to its own matrix row, with independent levels per mix. A channel
+can also carry its own `voice_model`, so the broadcast voice is audibly not yours.
+
+```bash
+uv run gamepilot channels                       # config + the sinks that exist
+uv run gamepilot say "comms check" --channel squad
+uv run gamepilot ask --broadcast "eta to microtech"
+```
+
+Details in [docs/audio-channels.md](docs/audio-channels.md).
+
+## Tray and settings
+
+`gamepilot run` sits in the system tray — colour and tooltip show idle / listening /
+working, and the menu has mute, stop speaking, new context and settings.
+`gamepilot settings` opens the window on its own.
+
+The settings window picks the **microphone** (with a 3-second test that shows the level
+and what Whisper heard), configures each **output channel** (sink, volume,
+`application.name`, per-channel test button), and holds the **route grid** deciding
+which hotkey speaks on which channel.
+
+It writes to `config.local.toml`, which layers on top of `config.toml` — so the UI never
+rewrites the file you hand-edited, comments included. Details in
+[docs/ui.md](docs/ui.md).
 
 ## Constraints
 
@@ -81,8 +124,11 @@ src/gamepilot/
   capture/audio.py         push-to-talk recorder
   capture/screen.py        spectacle grab + ffmpeg downscale
   stt.py                   faster-whisper (CUDA, falls back to CPU)
-  tts.py                   piper, speaks sentence-by-sentence while the answer streams
+  tts.py                   piper, sentence-by-sentence, fanned out to N audio channels
   overlay.py               frameless Qt overlay
+  ui/tray.py               tray icon, status colour, quick actions
+  ui/settings.py           mic picker, channel routing, backend options
+  ui/app.py                Qt entry point and the single event dispatcher
   hotkeys.py               evdev listener
   pipeline.py              wires it together
 ```

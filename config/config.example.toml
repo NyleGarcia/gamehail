@@ -18,11 +18,15 @@ timeout_s = 120
 # Hold to talk. Find names with `gamepilot keys`.
 ask_voice = "KEY_F13"
 ask_screen = "KEY_F14"                 # same, plus a screenshot taken on key-down
+ask_broadcast = "KEY_F16"              # answer is spoken to you AND to the squad
 cancel = "KEY_F15"                     # shut up / hide overlay
+# HOTAS buttons work too, e.g. ask_voice = "BTN_TRIGGER_HAPPY5" on a VIRPIL stick.
+# Set a key to "" to disable that action.
 min_hold_ms = 150
 # devices = ["/dev/input/event5"]      # empty = autodetect
 
 [stt]
+input_device = ""                      # PortAudio name; empty = system default
 model = "small.en"                     # tiny.en | base.en | small.en | medium.en
 device = "auto"                        # auto -> try CUDA, fall back to CPU
 language = "en"
@@ -31,12 +35,41 @@ max_seconds = 30
 [tts]
 enabled = true
 voice_model = "~/.local/share/gamepilot/voices/en_US-amy-medium.onnx"
+player = "pw-play"                     # "pw-play" routes per channel; "aplay" cannot
+
+# Audio channels. `target` is a PipeWire sink ("default" = whatever you listen on);
+# `app_name` is the application.name the stream carries, which is what OpenWave binds
+# an app-source row to - give each channel its own so they get their own matrix row.
+# Check names with `gamepilot channels`, test with `gamepilot say hello --channel squad`.
+[[tts.channels]]
+name = "me"
+target = "default"                     # or "openwave_personal_mix"
+app_name = "gamepilot"
+volume = 1.0
+
+[[tts.channels]]
+name = "squad"
+target = "openwave_chat_mix"           # Discord captures Monitor of OpenWave Chat Mix
+app_name = "gamepilot-squad"
+volume = 0.9
+enabled = true
+# voice_model = "~/.local/share/gamepilot/voices/en_US-ryan-high.onnx"  # different voice
+
+# Which channels each hotkey speaks on.
+[tts.routes]
+ask_voice = ["me"]
+ask_screen = ["me"]
+ask_broadcast = ["me", "squad"]
 
 [screen]
 enabled = true
 mode = "active"                        # active window (the game) | full desktop
 max_width = 1280                       # downscale: ~1.2k input tokens instead of ~2.8k
 quality = 4
+
+[ui]
+tray = true                            # system tray icon + settings window
+show_answers_in_tray = true            # notify with the answer when the overlay is off
 
 [overlay]
 enabled = true
