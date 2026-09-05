@@ -52,7 +52,7 @@ class Tray(QtCore.QObject):
         self._settings: SettingsWindow | None = None
 
         self.icon = QtWidgets.QSystemTrayIcon(make_icon(_IDLE))
-        self.icon.setToolTip("gamepilot — idle")
+        self.icon.setToolTip("gamehail — idle")
         self.icon.activated.connect(self._on_activated)
         self.icon.setContextMenu(self._menu())
         self.icon.show()
@@ -119,7 +119,7 @@ class Tray(QtCore.QObject):
     def set_status(self, text: str) -> None:
         short = text if len(text) < 60 else text[:57] + "…"
         self.status_action.setText(short or "idle")
-        self.icon.setToolTip(f"gamepilot — {short}" if short else "gamepilot")
+        self.icon.setToolTip(f"gamehail — {short}" if short else "gamehail")
         colour = _IDLE
         if text.startswith("listening"):
             colour = _TALK

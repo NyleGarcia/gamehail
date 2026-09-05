@@ -99,7 +99,7 @@ class ChannelRow(QtWidgets.QWidget):
         return {
             "name": self.channel.name,
             "target": self.target.currentText().strip() or "default",
-            "app_name": self.app_name.text().strip() or "gamepilot",
+            "app_name": self.app_name.text().strip() or "gamehail",
             "volume": round(self.volume.value() / 100, 2),
             "enabled": self.enabled.isChecked(),
             **({"voice_model": chosen} if chosen else {}),
@@ -120,7 +120,7 @@ class SettingsWindow(QtWidgets.QWidget):
         super().__init__(parent)
         self.cfg = cfg
         self.pipeline = pipeline
-        self.setWindowTitle("gamepilot settings")
+        self.setWindowTitle("gamehail settings")
         self.resize(820, 560)
 
         tabs = QtWidgets.QTabWidget()
@@ -282,7 +282,7 @@ class SettingsWindow(QtWidgets.QWidget):
             self.status.setText("no voice installed — use Get more voices…")
             return
         self._test_channel({
-            "name": "preview", "target": "default", "app_name": "gamepilot",
+            "name": "preview", "target": "default", "app_name": "gamehail",
             "volume": 1.0, "voice_model": chosen,
         })
 
@@ -297,6 +297,20 @@ class SettingsWindow(QtWidgets.QWidget):
     def _assistant_tab(self) -> QtWidgets.QWidget:
         page = QtWidgets.QWidget()
         form = QtWidgets.QFormLayout(page)
+
+        from .. import gamemodules
+
+        self.game = QtWidgets.QComboBox()
+        self.game.addItem("Auto-detect the running game", "")
+        detected = gamemodules.detect()
+        for module in gamemodules.discover().values():
+            suffix = "  (running)" if detected and module.id == detected.id else ""
+            self.game.addItem(f"{module.name}{suffix}", module.id)
+        index = self.game.findData(self.cfg.games.override)
+        self.game.setCurrentIndex(max(index, 0))
+        self.game.setToolTip("A game module carries that game's MCP servers, prompt and "
+                             "vocabulary. Auto-detect follows whichever game is running.")
+        form.addRow("Game", self.game)
 
         self.mode = QtWidgets.QComboBox()
         self.mode.addItems(["persistent", "oneshot"])
@@ -329,7 +343,7 @@ class SettingsWindow(QtWidgets.QWidget):
         self.hotkeys_enabled.setChecked(self.cfg.hotkeys.enabled)
         self.hotkeys_enabled.setToolTip(
             "Reads /dev/input directly, which needs membership of the `input` group. "
-            "Deck keys and `gamepilot ctl` work without it.")
+            "Deck keys and `gamehail ctl` work without it.")
         form.addRow("Hotkeys", self.hotkeys_enabled)
 
         keys = QtWidgets.QLabel(
@@ -338,8 +352,8 @@ class SettingsWindow(QtWidgets.QWidget):
             f"broadcast: <b>{self.cfg.hotkeys.ask_broadcast}</b> &nbsp; "
             f"cancel: <b>{self.cfg.hotkeys.cancel}</b><br>"
             "<span style='color:#8a94a6'>Rebind in the config file; find key names "
-            "with <tt>gamepilot keys</tt>. Triggering otherwise comes from the deck "
-            "plugin or <tt>gamepilot ctl</tt>.</span>"
+            "with <tt>gamehail keys</tt>. Triggering otherwise comes from the deck "
+            "plugin or <tt>gamehail ctl</tt>.</span>"
         )
         keys.setWordWrap(True)
         form.addRow("", keys)
@@ -379,7 +393,7 @@ class SettingsWindow(QtWidgets.QWidget):
             self.status.setText(f"cannot speak: {speaker.unavailable_reason}")
             return
         speaker.begin([channel.name])
-        speaker.feed(f"gamepilot on channel {channel.name}. ")
+        speaker.feed(f"gamehail on channel {channel.name}. ")
         speaker.flush()
         self.status.setText(f"testing {channel.name} → {channel.target}")
 
@@ -441,6 +455,7 @@ class SettingsWindow(QtWidgets.QWidget):
             },
             "screen": {"enabled": self.screen_enabled.isChecked()},
             "hotkeys": {"enabled": self.hotkeys_enabled.isChecked()},
+            "games": {"override": self.game.currentData() or ""},
             "overlay": {"enabled": self.overlay_enabled.isChecked()},
         }
         path = cfgmod.save_patch(patch, self.cfg.path)
@@ -466,6 +481,9 @@ class SettingsWindow(QtWidgets.QWidget):
         self.cfg.stt.input_device = self.mic.currentData() or ""
         self.cfg.screen.enabled = self.screen_enabled.isChecked()
         self.cfg.hotkeys.enabled = self.hotkeys_enabled.isChecked()
+        self.cfg.games.override = self.game.currentData() or ""
+        if self.pipeline:
+            self.pipeline.refresh_module(force=True)
         self.cfg.backend.mode = self.mode.currentText()
         self.cfg.backend.model = self.model.currentText().strip()
         self.cfg.backend.effort = self.effort.currentText()

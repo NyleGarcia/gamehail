@@ -1,14 +1,14 @@
 [Unit]
-Description=gamepilot gaming assistant
+Description=gamehail gaming assistant
 After=graphical-session.target
 PartOf=graphical-session.target
 
 [Service]
 Type=simple
-WorkingDirectory=%h/git/gamepilot
+WorkingDirectory=%h/git/gamehail
 # The venv entry point rather than `uv run`: uv is not always on the PATH systemd
 # builds for user units, and the venv binary needs no resolution at all.
-ExecStart=%h/git/gamepilot/.venv/bin/gamepilot run
+ExecStart=%h/git/gamehail/.venv/bin/gamehail run
 Restart=on-failure
 RestartSec=3
 # Shutdown closes the warm claude session and any speech in flight; the default stop

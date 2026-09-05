@@ -6,10 +6,10 @@ updated: 2026-09-05
 
 # Tray and settings UI
 
-`gamepilot run` puts an icon in the system tray. The icon colour is the state — blue
+`gamehail run` puts an icon in the system tray. The icon colour is the state — blue
 idle, green listening, amber working — and its tooltip carries the current status, so a
 glance says whether it heard you. The menu offers mute, stop speaking, a fresh context
-(restarts the warm `claude` session), settings, and quit. `gamepilot settings` opens the
+(restarts the warm `claude` session), settings, and quit. `gamehail settings` opens the
 same window without the daemon.
 
 ## Settings window
@@ -26,7 +26,7 @@ same window without the daemon.
   key answers over voice comms; leave it clear on `ask_voice` and that key stays private.
 
 **Assistant tab** — backend mode and model, effort, screenshot and overlay toggles, and
-the current hotkey bindings (rebound in the config file; `gamepilot keys` prints names).
+the current hotkey bindings (rebound in the config file; `gamehail keys` prints names).
 
 ## Where settings are written
 

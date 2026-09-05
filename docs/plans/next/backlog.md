@@ -7,5 +7,5 @@ updated: 2026-09-05
 # Next
 
 - Wake word instead of push-to-talk (openWakeWord)
-- Per-game profile auto-switch from the focused window class
+- Detect games by focused window class as well as process name
 - Answer history pane in the overlay

@@ -22,7 +22,7 @@ CATALOGUE_URL = f"{BASE}/voices.json"
 
 def voices_dir() -> Path:
     data = os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share")
-    return Path(data) / "gamepilot" / "voices"
+    return Path(data) / "gamehail" / "voices"
 
 
 def installed() -> list[Path]:
@@ -38,7 +38,7 @@ def installed() -> list[Path]:
 
 def _cache_path() -> Path:
     cache = os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")
-    return Path(cache) / "gamepilot" / "voices.json"
+    return Path(cache) / "gamehail" / "voices.json"
 
 
 def catalogue(refresh: bool = False, timeout: float = 15.0) -> dict:

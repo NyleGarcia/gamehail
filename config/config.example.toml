@@ -1,13 +1,22 @@
-# gamepilot config -> copy to ~/.config/gamepilot/config.toml
-profile = "star-citizen"
-work_dir = "/tmp/gamepilot"
+# gamehail config -> copy to ~/.config/gamehail/config.toml
+#
+# Game-specific settings (MCP servers, prompt, vocabulary) are NOT here - they live in
+# game modules, one file per game. See `gamehail games`.
+work_dir = "/tmp/gamehail"
+
+[games]
+# Which game module answers. Modules are TOML files describing a game's MCP servers,
+# prompt and vocabulary: bundled ones live in the package, yours in
+# ~/.config/gamehail/games/. `gamehail games` lists them.
+auto_switch = true                     # follow whichever game is running
+default = "generic"                    # when none is detected
+override = ""                          # pin one, e.g. "star-citizen"
 
 [backend]
 # "persistent" keeps one `claude` process warm: ~1s follow-ups, context carries over.
 # "oneshot" spawns a fresh process per question: ~3s, no memory between questions.
 mode = "persistent"
 model = "sonnet"                       # sonnet | opus | haiku | full model id
-mcp_config = "~/.config/gamepilot/mcp.json"
 permission_mode = "dontAsk"
 restricted = true                      # drop Bash / code-running tools
 effort = "low"
@@ -15,11 +24,11 @@ max_turns = 40                         # restart the warm session after N turns
 timeout_s = 120
 
 [hotkeys]
-# Off: triggering comes from the deck plugin or `gamepilot ctl`, neither of which needs
+# Off: triggering comes from the deck plugin or `gamehail ctl`, neither of which needs
 # the `input` group or risks a key the game already owns. Set true to also read
 # /dev/input for hold-to-talk on a key or a HOTAS button.
 enabled = false
-# Hold to talk. Find names with `gamepilot keys`.
+# Hold to talk. Find names with `gamehail keys`.
 ask_voice = "KEY_F13"
 ask_screen = "KEY_F14"                 # same, plus a screenshot taken on key-down
 ask_broadcast = "KEY_F16"              # answer is spoken to you AND to the squad
@@ -38,7 +47,7 @@ max_seconds = 30
 
 [tts]
 enabled = true
-voice_model = "~/.local/share/gamepilot/voices/en_US-amy-medium.onnx"
+voice_model = "~/.local/share/gamehail/voices/en_US-amy-medium.onnx"
 player = "pw-play"                     # "pw-play" routes per channel; "aplay" cannot
 peak = 0.5                             # ceiling per sentence; piper renders at full
                                        # scale and clips against game audio in the mix
@@ -46,26 +55,26 @@ peak = 0.5                             # ceiling per sentence; piper renders at 
 # Audio channels. `target` is a PipeWire sink ("default" = whatever you listen on);
 # `app_name` is the application.name the stream carries, which is what OpenWave binds
 # an app-source row to - give each channel its own so they get their own matrix row.
-# Check names with `gamepilot channels`, test with `gamepilot say hello --channel squad`.
+# Check names with `gamehail channels`, test with `gamehail say hello --channel squad`.
 [[tts.channels]]
 # Target the mix itself, not "default". Playing into the default sink means going
 # through whichever OpenWave source row it happens to be, and that arrived ~21 dB down
 # at the headphones - fine in a quiet room, lost under a game.
 name = "me"
 target = "openwave_personal_mix"
-app_name = "gamepilot"
+app_name = "gamehail"
 volume = 1.0
 
 [[tts.channels]]
 name = "squad"
 target = "openwave_chat_mix"           # Discord captures Monitor of OpenWave Chat Mix
-app_name = "gamepilot-squad"
+app_name = "gamehail-squad"
 volume = 0.9
 enabled = true
 # A different voice on the broadcast channel, so the squad can tell the assistant apart
-# from you. `gamepilot channels` lists what is installed; the settings window downloads
+# from you. `gamehail channels` lists what is installed; the settings window downloads
 # more.
-voice_model = "~/.local/share/gamepilot/voices/en_GB-alan-medium.onnx"
+voice_model = "~/.local/share/gamehail/voices/en_GB-alan-medium.onnx"
 
 # Which channels each hotkey speaks on.
 [tts.routes]
@@ -89,32 +98,3 @@ corner = "top-right"
 width = 620
 font_size = 15
 hide_after_s = 20
-
-# ---- per-game profiles -------------------------------------------------------
-# Words Whisper has never met. Without these it hears "lara night" for laranite.
-[profiles.star-citizen.stt]
-vocabulary = [
-  "Star Citizen", "aUEC", "SCU", "quantum drive", "quantanium", "laranite",
-  "agricium", "titanium", "diamond", "gold", "bexalite", "hadanite", "medical supplies",
-  "Stanton", "Pyro", "Hurston", "Lorville", "ArcCorp", "Area 18", "microTech",
-  "New Babbage", "Crusader", "Orison", "Port Olisar", "Grim HEX", "Everus Harbor",
-  "Baijini Point", "Port Tressler", "Ruin Station", "Checkmate", "Orbituary",
-  "Constellation", "Andromeda", "Caterpillar", "Hercules", "Starfarer", "Prospector",
-  "MOLE", "Reclaimer", "Vulture", "Corsair", "Cutlass", "Freelancer", "Hull C",
-  "Carrack", "Polaris", "Idris", "Redeemer", "Vanguard", "Gladius", "Arrow", "Hornet",
-]
-
-[profiles.star-citizen.backend]
-system_prompt = """
-You are a live Star Citizen assistant. The player is flying and cannot read long text.
-Answer in at most 3 short sentences. Lead with the number or the name they asked for.
-No preamble, no markdown, no bullet lists. Always use the scmcp tools for prices,
-terminals, trade routes, ships and items - never answer from memory.
-"""
-allowed_tools = ["Read", "mcp__scmcp"]
-
-[profiles.default.backend]
-system_prompt = """
-You are a live in-game assistant. Answer in at most 3 short sentences, no markdown.
-"""
-allowed_tools = ["Read"]

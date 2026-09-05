@@ -10,7 +10,7 @@ import json
 import sys
 from pathlib import Path
 
-PLUGIN = Path(__file__).resolve().parent.parent / "dev.gamepilot.sdPlugin"
+PLUGIN = Path(__file__).resolve().parent.parent / "dev.gamehail.sdPlugin"
 
 
 def main() -> int:
@@ -42,7 +42,7 @@ def main() -> int:
         if uuid in seen:
             problems.append(f"{uuid}: duplicate UUID")
         seen.add(uuid)
-        if not uuid.startswith("dev.gamepilot."):
+        if not uuid.startswith("dev.gamehail."):
             problems.append(f"{uuid}: UUID outside the plugin namespace")
         check_image(action.get("Icon", ""), uuid)
         for index, state in enumerate(action.get("States", [])):

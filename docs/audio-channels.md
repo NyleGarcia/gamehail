@@ -14,12 +14,12 @@ answer reaches your ears and your squad's.
 [[tts.channels]]
 name = "me"
 target = "default"              # what you are listening on
-app_name = "gamepilot"
+app_name = "gamehail"
 
 [[tts.channels]]
 name = "squad"
 target = "openwave_chat_mix"    # Discord captures Monitor of OpenWave Chat Mix
-app_name = "gamepilot-squad"
+app_name = "gamehail-squad"
 volume = 0.9
 
 [tts.routes]
@@ -29,15 +29,15 @@ ask_broadcast = ["me", "squad"]
 ```
 
 `routes` maps a hotkey action to its channels, so `KEY_F13` answers privately and
-`KEY_F16` answers to everyone. `gamepilot channels` prints the configuration next to
-the sinks that actually exist; `gamepilot say hello --channel squad` proves the route
+`KEY_F16` answers to everyone. `gamehail channels` prints the configuration next to
+the sinks that actually exist; `gamehail say hello --channel squad` proves the route
 before you rely on it in a fight.
 
 ## How it reaches Discord
 
 OpenWave publishes the Chat Mix as a capture source, and voice apps select **Monitor of
 OpenWave Chat Mix** as their microphone. Anything played into `openwave_chat_mix`
-therefore goes out over voice comms — gamepilot just plays there, no bot and no bridge.
+therefore goes out over voice comms — gamehail just plays there, no bot and no bridge.
 
 Two ways to wire it, both only a `target` change:
 
@@ -47,8 +47,8 @@ Two ways to wire it, both only a `target` change:
    becomes its own row, so the squad channel can sit at a different level in Chat Mix
    than in Personal Mix, and can be muted independently.
 
-Verified here with both channels speaking at once: `gamepilot` on the default sink and
-`gamepilot-squad` on `openwave_chat_mix`, as two simultaneous sink-inputs.
+Verified here with both channels speaking at once: `gamehail` on the default sink and
+`gamehail-squad` on `openwave_chat_mix`, as two simultaneous sink-inputs.
 
 ## Aim at a mix, not at "default"
 
@@ -71,7 +71,7 @@ If a channel ever goes quiet again, record the monitor and measure rather than g
 ```bash
 parec --device=openwave_personal_mix.monitor --format=s16le --rate=48000 --channels=2 \
   > /tmp/probe.raw &
-gamepilot ctl ask "say exactly: audio check"
+gamehail ctl ask "say exactly: audio check"
 ```
 
 ## Playback mechanics

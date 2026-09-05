@@ -67,7 +67,7 @@ class HotkeyListener:
         if not found:
             raise RuntimeError(
                 "no input device exposes the configured hotkeys. "
-                "Check `gamepilot devices`, and that you are in the `input` group."
+                "Check `gamehail devices`, and that you are in the `input` group."
             )
         for dev in found:
             log.info("listening on %s (%s)", dev.path, dev.name)

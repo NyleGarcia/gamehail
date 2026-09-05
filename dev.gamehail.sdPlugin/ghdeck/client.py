@@ -1,7 +1,7 @@
-"""Talk to the gamepilot daemon over its control socket.
+"""Talk to the gamehail daemon over its control socket.
 
 Deliberately tiny and standard-library only: the plugin runs under OpenDeck's own
-interpreter environment, so it cannot rely on anything installed in gamepilot's venv.
+interpreter environment, so it cannot rely on anything installed in gamehail's venv.
 """
 
 import json
@@ -10,11 +10,11 @@ import socket
 
 
 def socket_path():
-    override = os.environ.get("GAMEPILOT_SOCKET")
+    override = os.environ.get("GAMEHAIL_SOCKET")
     if override:
         return override
     runtime = os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}"
-    return os.path.join(runtime, "gamepilot.sock")
+    return os.path.join(runtime, "gamehail.sock")
 
 
 class NotRunning(Exception):

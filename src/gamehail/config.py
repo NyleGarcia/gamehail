@@ -11,7 +11,7 @@ from typing import Any
 
 DEFAULT_CONFIG_PATH = Path(
     os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")
-) / "gamepilot" / "config.toml"
+) / "gamehail" / "config.toml"
 
 
 def _expand(p: str | None) -> Path | None:
@@ -79,7 +79,7 @@ class TtsChannel:
 
     name: str = "me"
     target: str = "default"
-    app_name: str = "gamepilot"
+    app_name: str = "gamehail"
     volume: float = 1.0
     voice_model: Path | None = None  # overrides TtsConfig.voice_model
     enabled: bool = True
@@ -87,9 +87,9 @@ class TtsChannel:
 
 def _default_channels() -> list[TtsChannel]:
     return [
-        TtsChannel(name="me", target="default", app_name="gamepilot"),
+        TtsChannel(name="me", target="default", app_name="gamehail"),
         TtsChannel(
-            name="squad", target="openwave_chat_mix", app_name="gamepilot-squad",
+            name="squad", target="openwave_chat_mix", app_name="gamehail-squad",
             enabled=False,
         ),
     ]
@@ -137,6 +137,15 @@ class OverlayConfig:
 
 
 @dataclass
+class GamesConfig:
+    """Which game module answers. Modules live in `gamemodules.py`."""
+
+    auto_switch: bool = True   # follow whichever game is running
+    default: str = "generic"   # when nothing is detected
+    override: str = ""         # pin one module regardless of what is running
+
+
+@dataclass
 class UiConfig:
     tray: bool = True
     show_answers_in_tray: bool = True
@@ -153,7 +162,8 @@ class Config:
     screen: ScreenConfig = field(default_factory=ScreenConfig)
     overlay: OverlayConfig = field(default_factory=OverlayConfig)
     ui: UiConfig = field(default_factory=UiConfig)
-    work_dir: Path = Path("/tmp/gamepilot")
+    games: GamesConfig = field(default_factory=GamesConfig)
+    work_dir: Path = Path("/tmp/gamehail")
 
 
 def _merge(base: Any, patch: dict[str, Any]) -> Any:
@@ -223,7 +233,8 @@ def load(path: Path | None = None, profile: str | None = None) -> Config:
 
     cfg = Config(path=path, profile=profile)
     for layer in layers:
-        for section in ("backend", "hotkeys", "stt", "tts", "screen", "overlay", "ui"):
+        for section in ("backend", "hotkeys", "stt", "tts", "screen", "overlay", "ui",
+                        "games"):
             if section in layer:
                 setattr(cfg, section, _merge(getattr(cfg, section), _coerce(section, layer[section])))
         if "work_dir" in layer:

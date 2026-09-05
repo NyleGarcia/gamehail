@@ -48,14 +48,14 @@ class Dispatcher(QtCore.QObject):
                 elif kind == "answer" and payload:
                     self.tray.set_status("idle")
                     if self.overlay is None:
-                        self.tray.notify("gamepilot", payload)
+                        self.tray.notify("gamehail", payload)
                 elif kind == "hide":
                     self.tray.set_status("idle")
 
 
 def run_ui(cfg: Config, events: Queue, pipeline=None) -> int:
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
-    app.setApplicationName("gamepilot")
+    app.setApplicationName("gamehail")
     app.setQuitOnLastWindowClosed(False)  # closing settings must not kill the daemon
 
     overlay = None
@@ -96,7 +96,7 @@ def run_settings(cfg: Config) -> int:
     from .settings import SettingsWindow
 
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
-    app.setApplicationName("gamepilot")
+    app.setApplicationName("gamehail")
     window = SettingsWindow(cfg)
     window.show()
     return app.exec()

@@ -1,4 +1,4 @@
-"""gamepilot command line."""
+"""gamehail command line."""
 
 from __future__ import annotations
 
@@ -20,6 +20,8 @@ def _common(p: argparse.ArgumentParser) -> None:
     p.add_argument("--mode", choices=["persistent", "oneshot"], default=None,
                    help="override backend mode")
     p.add_argument("--model", default=None, help="override model (sonnet, opus, haiku, ...)")
+    p.add_argument("-g", "--game", default=None,
+                   help="pin a game module instead of detecting one (see `gamehail games`)")
     p.add_argument("-v", "--verbose", action="store_true")
 
 
@@ -29,6 +31,8 @@ def _load(args) -> config.Config:
         cfg.backend.mode = args.mode
     if args.model:
         cfg.backend.model = args.model
+    if getattr(args, "game", None):
+        cfg.games.override = args.game
     return cfg
 
 
@@ -51,9 +55,9 @@ def cmd_run(args) -> int:
         pipe.start()
     except (OSError, RuntimeError) as exc:
         logging.error("cannot start: %s", exc)
-        if "another gamepilot" in str(exc):
+        if "another gamehail" in str(exc):
             logging.error("stop the running one first, or point this one elsewhere "
-                          "with GAMEPILOT_SOCKET")
+                          "with GAMEHAIL_SOCKET")
         pipe.close()
         return 1
     triggers = f"socket {pipe.control.path}"
@@ -61,8 +65,9 @@ def cmd_run(args) -> int:
         triggers += (f" | keys {cfg.hotkeys.ask_voice}/{cfg.hotkeys.ask_screen}"
                      f"/{cfg.hotkeys.ask_broadcast}")
     logging.info(
-        "gamepilot up | profile=%s backend=%s model=%s | triggers: %s",
-        cfg.profile, cfg.backend.mode, cfg.backend.model, triggers,
+        "gamehail up | game=%s backend=%s model=%s | triggers: %s",
+        pipe.module.id if pipe.module else "none", cfg.backend.mode, cfg.backend.model,
+        triggers,
     )
 
     try:
@@ -168,6 +173,35 @@ def cmd_say(args) -> int:
     return 0
 
 
+def cmd_games(args) -> int:
+    """List game modules and say which one is answering."""
+    from . import gamemodules
+
+    cfg = _load(args)
+    modules = gamemodules.discover()
+    if not modules:
+        print("no game modules found", file=sys.stderr)
+        return 1
+    detected = gamemodules.detect(modules)
+    active = gamemodules.resolve(cfg.games.default, cfg.games.auto_switch,
+                                 cfg.games.override or None)
+    for module in modules.values():
+        marks = []
+        if detected and module.id == detected.id:
+            marks.append("running")
+        if active and module.id == active.id:
+            marks.append("active")
+        servers = ", ".join(module.mcp) or ("-" if not module.mcp_config else "file")
+        print(f"{'*' if 'active' in marks else ' '} {module.id:<16} {module.name:<22} "
+              f"mcp: {servers:<12} {'(' + ', '.join(marks) + ')' if marks else ''}")
+    if cfg.games.override:
+        print(f"\npinned to {cfg.games.override} by config/--game; detection is ignored.")
+    elif not detected:
+        print(f"\nno game running; using the default ({cfg.games.default}). "
+              "Pin one with --game or [games] override.")
+    return 0
+
+
 def cmd_ctl(args) -> int:
     """Drive a running daemon over its control socket."""
     import json as _json
@@ -189,7 +223,7 @@ def cmd_ctl(args) -> int:
     try:
         reply = ipc.send(msg, Path(args.socket) if args.socket else None)
     except (OSError, ConnectionError) as exc:
-        print(f"no running gamepilot on the control socket: {exc}", file=sys.stderr)
+        print(f"no running gamehail on the control socket: {exc}", file=sys.stderr)
         return 1
     print(_json.dumps(reply, indent=2) if args.json else
           reply.get("error") or reply.get("state") or "ok")
@@ -245,8 +279,8 @@ def cmd_keys(args) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="gamepilot", description=__doc__)
-    parser.add_argument("--version", action="version", version=f"gamepilot {__version__}")
+    parser = argparse.ArgumentParser(prog="gamehail", description=__doc__)
+    parser.add_argument("--version", action="version", version=f"gamehail {__version__}")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p_run = sub.add_parser("run", help="start the hotkey daemon")
@@ -268,6 +302,10 @@ def main(argv: list[str] | None = None) -> int:
                        help="use the ask_broadcast route (you + the squad)")
     p_ask.add_argument("--no-tts", action="store_true")
     p_ask.set_defaults(func=cmd_ask)
+
+    p_games = sub.add_parser("games", help="list game modules and which is active")
+    _common(p_games)
+    p_games.set_defaults(func=cmd_games)
 
     p_chan = sub.add_parser("channels", help="show audio channels, routes and sinks")
     _common(p_chan)

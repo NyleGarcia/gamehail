@@ -13,8 +13,8 @@ from pathlib import Path
 
 import pytest
 
-from gamepilot.config import TtsChannel, TtsConfig
-from gamepilot.tts import Speaker
+from gamehail.config import TtsChannel, TtsConfig
+from gamehail.tts import Speaker
 
 PCM = b"\x01\x02" * 8000  # 32 KB, larger than a pipe buffer
 
@@ -68,8 +68,8 @@ def test_limiter_pulls_peaks_down_but_never_up(tmp_path):
     """A full-scale sentence must come back at the ceiling; a quiet one untouched."""
     import numpy as np
 
-    from gamepilot.config import TtsConfig
-    from gamepilot.tts import Speaker
+    from gamehail.config import TtsConfig
+    from gamehail.tts import Speaker
 
     speaker = Speaker(TtsConfig(peak=0.5))
 

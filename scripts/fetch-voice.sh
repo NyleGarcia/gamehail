@@ -3,7 +3,7 @@
 set -euo pipefail
 
 VOICE="${1:-en_US-amy-medium}"
-DEST="${XDG_DATA_HOME:-$HOME/.local/share}/gamepilot/voices"
+DEST="${XDG_DATA_HOME:-$HOME/.local/share}/gamehail/voices"
 BASE="https://huggingface.co/rhasspy/piper-voices/resolve/main"
 
 # en_US-amy-medium -> en/en_US/amy/medium

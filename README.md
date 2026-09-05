@@ -1,6 +1,6 @@
-# gamepilot
+# gamehail
 
-Hotkey gaming assistant for Linux. Hold a key, ask a question out loud, get a spoken
+Voice assistant for games on Linux. Hold a key, ask a question out loud, get a spoken
 answer plus an on-screen overlay — answered by Claude Code running headless against a
 game's MCP server (e.g. [SCMCP](https://github.com/) for Star Citizen).
 
@@ -9,10 +9,26 @@ Claude Code subscription.
 
 ```
   hold a deck key ─┐
-  gamepilot ctl ───┼─► mic ──► whisper ──► claude -p (+ game MCP) ─┬─► piper ──► "me"    (your headset)
+  gamehail ctl ───┼─► mic ──► whisper ──► claude -p (+ game MCP) ─┬─► piper ──► "me"    (your headset)
   (keyboard: opt-in)│      + screenshot ──┘                        ├─► piper ──► "squad" (OpenWave Chat Mix ──► Discord)
                     │                                              └─► Qt overlay + tray
 ```
+
+## One module per game
+
+gamehail is not tied to a single game. A **module** is a TOML file naming the MCP
+servers that know a game, the words the speech recogniser has never met, and how to
+answer — and gamehail switches to it automatically when that game is running.
+
+```bash
+gamehail games                    # what is installed, what is running, what is active
+gamehail --game star-citizen ask "best price for laranite"
+```
+
+**Star Citizen ships as the first module** ([SCMCP](https://github.com/) for live prices,
+terminals, trade routes and ships, plus 52 vocabulary terms so Whisper stops hearing
+"lara night"). Adding another game is adding a file in `~/.config/gamehail/games/` —
+see [docs/games.md](docs/games.md).
 
 ## Two backend modes
 
@@ -27,15 +43,15 @@ Measured on this machine with `--model sonnet`. Persistent mode restarts itself 
 ## Install
 
 ```bash
-git clone <this repo> ~/git/gamepilot && cd ~/git/gamepilot
+git clone <this repo> ~/git/gamehail && cd ~/git/gamehail
 ./scripts/install-deps.sh          # pacman deps + adds you to the `input` group
 uv sync
 ./scripts/fetch-voice.sh           # piper voice (en_US-amy-medium)
 ./scripts/install-kwin-rule.sh     # keeps the overlay above the game (KWin)
 
-mkdir -p ~/.config/gamepilot
-cp config/config.example.toml ~/.config/gamepilot/config.toml
-cp config/mcp.example.json    ~/.config/gamepilot/mcp.json
+mkdir -p ~/.config/gamehail
+cp config/config.example.toml ~/.config/gamehail/config.toml
+cp config/mcp.example.json    ~/.config/gamehail/mcp.json
 ```
 
 Then `make deck-install` and restart OpenDeck. Nothing here needs a group change or a
@@ -44,28 +60,28 @@ relogin — that is only for the optional keyboard hotkeys.
 ## Use
 
 ```bash
-uv run gamepilot run                      # start the daemon
-uv run gamepilot run --mode oneshot       # override the backend mode
-uv run gamepilot ask "best price for laranite right now"   # typed test, no mic
-uv run gamepilot keys                     # find evdev names for your keys
-uv run gamepilot devices                  # list input devices
+uv run gamehail run                      # start the daemon
+uv run gamehail run --mode oneshot       # override the backend mode
+uv run gamehail ask "best price for laranite right now"   # typed test, no mic
+uv run gamehail keys                     # find evdev names for your keys
+uv run gamehail devices                  # list input devices
 ```
 
 Autostart:
 
 ```bash
-cp scripts/gamepilot.service ~/.config/systemd/user/
-systemctl --user enable --now gamepilot
-journalctl --user -u gamepilot -f      # what it heard, what it answered
+cp scripts/gamehail.service ~/.config/systemd/user/
+systemctl --user enable --now gamehail
+journalctl --user -u gamehail -f      # what it heard, what it answered
 ```
 
 ## Triggering
 
-Deck keys and `gamepilot ctl` are the default and need no special permissions — see
+Deck keys and `gamehail ctl` are the default and need no special permissions — see
 [Stream Deck / OpenDeck](#stream-deck--opendeck) below.
 
 **Keyboard / HOTAS hotkeys are off by default.** Turn them on with `[hotkeys] enabled =
-true` (or `gamepilot run --hotkeys`) and gamepilot reads `/dev/input` directly, which
+true` (or `gamehail run --hotkeys`) and gamehail reads `/dev/input` directly, which
 needs membership of the `input` group:
 
 | key | action |
@@ -99,18 +115,18 @@ OpenWave can bind it to its own matrix row, with independent levels per mix. A c
 can also carry its own `voice_model`, so the broadcast voice is audibly not yours.
 
 ```bash
-uv run gamepilot channels                       # config + the sinks that exist
-uv run gamepilot say "comms check" --channel squad
-uv run gamepilot ask --broadcast "eta to microtech"
+uv run gamehail channels                       # config + the sinks that exist
+uv run gamehail say "comms check" --channel squad
+uv run gamehail ask --broadcast "eta to microtech"
 ```
 
 Details in [docs/audio-channels.md](docs/audio-channels.md).
 
 ## Tray and settings
 
-`gamepilot run` sits in the system tray — colour and tooltip show idle / listening /
+`gamehail run` sits in the system tray — colour and tooltip show idle / listening /
 working, and the menu has mute, stop speaking, new context and settings.
-`gamepilot settings` opens the window on its own.
+`gamehail settings` opens the window on its own.
 
 The settings window picks the **microphone** (with a 3-second test that shows the level
 and what Whisper heard), configures each **output channel** (sink, volume,
@@ -126,7 +142,7 @@ rewrites the file you hand-edited, comments included. Details in
 
 ## Stream Deck / OpenDeck
 
-`make deck-install` installs `dev.gamepilot.sdPlugin`. Five actions: **Hold to Ask**
+`make deck-install` installs `dev.gamehail.sdPlugin`. Five actions: **Hold to Ask**
 (keyDown records, keyUp sends — with a per-key route: private, with-screenshot, or to
 the squad), **Preset Question** (text typed in the inspector, no mic), **Mute Speech**,
 **Cancel**, and **Status**. A deck key needs no `input` group and cannot clash with a
@@ -135,10 +151,10 @@ game binding, which makes it the easiest trigger to live with.
 It drives the daemon's control socket, and so can anything else:
 
 ```bash
-gamepilot ctl press ask_voice        # a macro system can hold-to-talk too
-gamepilot ctl release ask_voice
-gamepilot ctl ask --route ask_broadcast "eta to microtech"
-gamepilot ctl status --json
+gamehail ctl press ask_voice        # a macro system can hold-to-talk too
+gamehail ctl release ask_voice
+gamehail ctl ask --route ask_broadcast "eta to microtech"
+gamehail ctl status --json
 ```
 
 Details in [docs/deck.md](docs/deck.md).
@@ -146,7 +162,7 @@ Details in [docs/deck.md](docs/deck.md).
 ## When it says "heard nothing"
 
 The answer path is: record → whisper → claude → speech. If a question goes nowhere,
-`journalctl --user -u gamepilot -n 30` names the step that failed. A "heard nothing"
+`journalctl --user -u gamehail -n 30` names the step that failed. A "heard nothing"
 that also reports a mic level near zero means the wrong input device, which the settings
 window's mic test settles in three seconds.
 
@@ -157,7 +173,7 @@ an RTX 5080) and drops to CPU on its own if the CUDA libraries are unusable.
 
 - **Wayland + KDE Plasma 6.** The overlay needs the game in *borderless window* mode;
   a true fullscreen surface will cover it. Voice and TTS work regardless.
-- **Screenshots cost tokens.** A 1080p frame is ~2.8k input tokens; gamepilot
+- **Screenshots cost tokens.** A 1080p frame is ~2.8k input tokens; gamehail
   downscales to 1280px wide (~1.2k) before sending. Turn it off in `[screen]` if you
   only want voice.
 - **`--restricted`** is on by default: Claude gets the game's MCP tools and `Read`,
@@ -166,7 +182,7 @@ an RTX 5080) and drops to CPU on its own if the CUDA libraries are unusable.
 ## Layout
 
 ```
-src/gamepilot/
+src/gamehail/
   backends/claude_cli.py   both CLI drivers (oneshot + persistent) and the argv builder
   capture/audio.py         push-to-talk recorder
   capture/screen.py        spectacle grab + ffmpeg downscale
@@ -176,9 +192,9 @@ src/gamepilot/
   ui/tray.py               tray icon, status colour, quick actions
   ui/settings.py           mic picker, channel routing, backend options
   ui/app.py                Qt entry point and the single event dispatcher
-  ipc.py                   control socket (deck keys, `gamepilot ctl`, macros)
+  ipc.py                   control socket (deck keys, `gamehail ctl`, macros)
   voices.py                installed voices, piper's catalogue, downloads
-dev.gamepilot.sdPlugin/    OpenDeck / Stream Deck plugin
+dev.gamehail.sdPlugin/    OpenDeck / Stream Deck plugin
   hotkeys.py               evdev listener
   pipeline.py              wires it together
 ```

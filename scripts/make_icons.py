@@ -17,7 +17,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PyQt6 import QtCore, QtGui  # noqa: E402
 from PyQt6.QtWidgets import QApplication  # noqa: E402
 
-OUT = Path(__file__).resolve().parent.parent / "dev.gamepilot.sdPlugin" / "icons"
+OUT = Path(__file__).resolve().parent.parent / "dev.gamehail.sdPlugin" / "icons"
 BG = QtGui.QColor("#151a21")
 ACCENT = QtGui.QColor("#7fc7ff")
 WARM = QtGui.QColor("#ffd166")

@@ -1,6 +1,6 @@
-"""gamepilot plugin for OpenDeck / Stream Deck.
+"""gamehail plugin for OpenDeck / Stream Deck.
 
-One process. It speaks OpenDeck's WebSocket protocol and drives the gamepilot daemon
+One process. It speaks OpenDeck's WebSocket protocol and drives the gamehail daemon
 through its control socket; nothing here needs to outlive the plugin.
 
 The interesting part is *Hold to Ask*: a deck key sends keyDown and keyUp as separate
@@ -22,16 +22,16 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from gpdeck import client                       # noqa: E402
-from gpdeck.ws import WebSocket                 # noqa: E402
+from ghdeck import client                       # noqa: E402
+from ghdeck.ws import WebSocket                 # noqa: E402
 
 LOG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "plugin.log")
 logging.basicConfig(
     filename=LOG_PATH,
-    level=logging.DEBUG if os.environ.get("GAMEPILOT_DECK_DEBUG") else logging.INFO,
+    level=logging.DEBUG if os.environ.get("GAMEHAIL_DECK_DEBUG") else logging.INFO,
     format="%(asctime)s %(levelname)s %(message)s",
 )
-log = logging.getLogger("gamepilot-deck")
+log = logging.getLogger("gamehail-deck")
 
 
 def _log_uncaught(kind, value, trace):
@@ -46,11 +46,11 @@ def _log_uncaught(kind, value, trace):
 
 sys.excepthook = _log_uncaught
 
-ASK = "dev.gamepilot.ask"
-PRESET = "dev.gamepilot.preset"
-MUTE = "dev.gamepilot.mute"
-CANCEL = "dev.gamepilot.cancel"
-STATUS = "dev.gamepilot.status"
+ASK = "dev.gamehail.ask"
+PRESET = "dev.gamehail.preset"
+MUTE = "dev.gamehail.mute"
+CANCEL = "dev.gamehail.cancel"
+STATUS = "dev.gamehail.status"
 
 ROUTE_LABEL = {
     "ask_voice": "Ask",
@@ -168,7 +168,8 @@ class Plugin:
         if label.startswith("»"):
             return "thinking"
         if label in ("idle", ""):
-            return f"{state.get('model', '?')}\n{state.get('backend', '')}"
+            game = state.get("game_name") or state.get("game") or "no game"
+            return f"{game}\n{state.get('model', '?')}"
         return label[:14]
 
     # -- event dispatch ----------------------------------------------------
@@ -225,7 +226,7 @@ def main():
     uuid = args.get("pluginUUID", "")
     register = args.get("registerEvent", "registerPlugin")
     if not port:
-        print("gamepilot deck plugin: no -port given", file=sys.stderr)
+        print("gamehail deck plugin: no -port given", file=sys.stderr)
         return 2
 
     ws = WebSocket(port, timeout=None)

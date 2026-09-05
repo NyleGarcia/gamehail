@@ -1,13 +1,14 @@
 ---
-title: gamepilot vault
+title: gamehail vault
 tags: [index]
 updated: 2026-09-05
 ---
 
-# gamepilot
+# gamehail
 
 - [[architecture]] — how a keypress becomes a spoken answer ([architecture](architecture.md))
 - [[backend-modes]] — oneshot vs persistent Claude CLI drivers ([backend-modes](backend-modes.md))
+- [[games]] — one module per game: MCP servers, prompt, vocabulary ([games](games.md))
 - [[audio-channels]] — private vs squad answer routing through OpenWave ([audio-channels](audio-channels.md))
 - [[ui]] — tray icon and settings window ([ui](ui.md))
 - [[deck]] — Stream Deck / OpenDeck plugin and the control socket ([deck](deck.md))

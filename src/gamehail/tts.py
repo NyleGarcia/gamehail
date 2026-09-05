@@ -154,7 +154,7 @@ class Speaker:
             # No --media-role: WirePlumber's role policy ducks a Notification stream,
             # which measured ~25 dB down at the headphones - inaudible under game audio.
             "-P", f'{{ application.name = "{ch.app_name}" '
-                  f'media.name = "gamepilot {ch.name}" }}',
+                  f'media.name = "gamehail {ch.name}" }}',
         ]
         if ch.target and ch.target != "default":
             cmd += ["--target", ch.target]

@@ -1,0 +1,17 @@
+# The fallback module: used when no game is detected and nothing else is pinned.
+#
+# It has no MCP server, so answers come from the model alone. Copy this to
+# ~/.config/gamehail/games/<your-game>.toml, add a `detect` entry and an [mcp.*] table,
+# and gamehail will switch to it whenever that game is running.
+
+[game]
+id = "generic"
+name = "No game detected"
+detect = []
+allowed_tools = ["Read"]
+
+system_prompt = """
+You are a live in-game assistant. The player is mid-game and cannot read long text.
+Answer in at most 3 short sentences, no preamble and no markdown. Say plainly when you
+are not sure rather than guessing at a number.
+"""

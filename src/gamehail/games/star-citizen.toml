@@ -1,0 +1,41 @@
+# Star Citizen - the first gamehail module.
+#
+# Copy this file to ~/.config/gamehail/games/ to change it; a module of the same id
+# there wins over this one, so your edits survive an update.
+
+[game]
+id = "star-citizen"
+name = "Star Citizen"
+# Matched against running process names. Proton reports the Windows executable.
+detect = ["StarCitizen.exe", "RSI Launcher", "StarCitizen_Launcher"]
+model = "sonnet"
+effort = "low"
+allowed_tools = ["Read", "mcp__scmcp"]
+
+system_prompt = """
+You are a live Star Citizen assistant. The player is flying and cannot read long text.
+Answer in at most 3 short sentences. Lead with the number or the name they asked for.
+No preamble, no markdown, no bullet lists. Always use the scmcp tools for prices,
+terminals, trade routes, ships and items - never answer from memory, because the
+economy changes every patch.
+"""
+
+# Words Whisper has never met. Without these it hears "lara night" for laranite.
+vocabulary = [
+  "Star Citizen", "aUEC", "SCU", "quantum drive", "quantanium", "laranite",
+  "agricium", "titanium", "diamond", "gold", "bexalite", "hadanite", "medical supplies",
+  "Stanton", "Pyro", "Hurston", "Lorville", "ArcCorp", "Area 18", "microTech",
+  "New Babbage", "Crusader", "Orison", "Port Olisar", "Grim HEX", "Everus Harbor",
+  "Baijini Point", "Port Tressler", "Ruin Station", "Checkmate", "Orbituary",
+  "Constellation", "Andromeda", "Caterpillar", "Hercules", "Starfarer", "Prospector",
+  "MOLE", "Reclaimer", "Vulture", "Corsair", "Cutlass", "Freelancer", "Hull C",
+  "Carrack", "Polaris", "Idris", "Redeemer", "Vanguard", "Gladius", "Arrow", "Hornet",
+]
+
+# The MCP server that knows the game. $HOME is expanded; point it at your own checkout.
+[mcp.scmcp]
+command = "sh"
+args = [
+  "-c",
+  ". $HOME/.secrets/scmcp.env && export UEXTOKEN && exec node $HOME/git/SCMCP/dist/index.js",
+]

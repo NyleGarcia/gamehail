@@ -29,9 +29,9 @@ log = logging.getLogger(__name__)
 
 
 def _claude_bin() -> str:
-    exe = os.environ.get("GAMEPILOT_CLAUDE_BIN") or shutil.which("claude")
+    exe = os.environ.get("GAMEHAIL_CLAUDE_BIN") or shutil.which("claude")
     if not exe:
-        raise RuntimeError("`claude` CLI not found on PATH (set GAMEPILOT_CLAUDE_BIN)")
+        raise RuntimeError("`claude` CLI not found on PATH (set GAMEHAIL_CLAUDE_BIN)")
     return exe
 
 

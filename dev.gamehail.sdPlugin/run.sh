@@ -15,6 +15,6 @@ exec env \
   -u APPDIR -u APPIMAGE -u ARGV0 \
   PATH=/usr/bin:/bin:/usr/local/bin \
   XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" \
-  GAMEPILOT_SOCKET="${GAMEPILOT_SOCKET:-}" \
-  GAMEPILOT_DECK_DEBUG="${GAMEPILOT_DECK_DEBUG:-}" \
+  GAMEHAIL_SOCKET="${GAMEHAIL_SOCKET:-}" \
+  GAMEHAIL_DECK_DEBUG="${GAMEHAIL_DECK_DEBUG:-}" \
   /usr/bin/python3 "$(dirname "$0")/plugin.py" "$@"

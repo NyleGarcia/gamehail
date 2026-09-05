@@ -9,7 +9,7 @@ updated: 2026-09-05
 One process, three threads plus Qt:
 
 1. **triggers** — the control socket (`ipc.py`) is the default one: a deck key,
-   `gamepilot ctl`, or any macro system sends `press` / `release`. The evdev listener
+   `gamehail ctl`, or any macro system sends `press` / `release`. The evdev listener
    (`hotkeys.py`) is the same thing from a keyboard or HOTAS button and is off unless
    `[hotkeys] enabled` is set, since it needs the `input` group. Both call
    `Pipeline.trigger()`, so neither path is privileged.

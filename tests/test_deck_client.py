@@ -7,12 +7,12 @@ from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "dev.gamepilot.sdPlugin"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "dev.gamehail.sdPlugin"))
 
-from gpdeck import client  # noqa: E402
+from ghdeck import client  # noqa: E402
 
 from test_ipc import StubPipeline  # noqa: E402
-from gamepilot.ipc import ControlServer  # noqa: E402
+from gamehail.ipc import ControlServer  # noqa: E402
 
 
 @pytest.fixture
@@ -20,7 +20,7 @@ def running(tmp_path, monkeypatch):
     pipe = StubPipeline()
     srv = ControlServer(pipe, tmp_path / "gp.sock")
     srv.start()
-    monkeypatch.setenv("GAMEPILOT_SOCKET", str(srv.path))
+    monkeypatch.setenv("GAMEHAIL_SOCKET", str(srv.path))
     yield pipe
     srv.close()
 
@@ -37,6 +37,6 @@ def test_status_reports_mute_state(running):
 
 
 def test_missing_daemon_raises_not_running(tmp_path, monkeypatch):
-    monkeypatch.setenv("GAMEPILOT_SOCKET", str(tmp_path / "absent.sock"))
+    monkeypatch.setenv("GAMEHAIL_SOCKET", str(tmp_path / "absent.sock"))
     with pytest.raises(client.NotRunning):
         client.status()

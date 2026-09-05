@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from gamepilot.ipc import ControlServer, send
+from gamehail.ipc import ControlServer, send
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "dev.gamepilot.sdPlugin"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "dev.gamehail.sdPlugin"))
 
 
 class StubSpeaker:

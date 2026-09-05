@@ -19,7 +19,7 @@ pytest.importorskip("PyQt6")
 
 from PyQt6 import QtWidgets  # noqa: E402
 
-from gamepilot.ui.app import Dispatcher  # noqa: E402
+from gamehail.ui.app import Dispatcher  # noqa: E402
 
 
 @pytest.fixture(scope="module")

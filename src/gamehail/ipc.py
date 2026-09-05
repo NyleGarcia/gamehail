@@ -1,7 +1,7 @@
 """Control socket: newline-delimited JSON over a Unix socket.
 
-This is how anything that is not a keyboard drives gamepilot - the Stream Deck /
-OpenDeck plugin, `gamepilot ctl`, a shell script, a macro on the HOTAS. A Stream Deck
+This is how anything that is not a keyboard drives gamehail - the Stream Deck /
+OpenDeck plugin, `gamehail ctl`, a shell script, a macro on the HOTAS. A Stream Deck
 key sends keyDown and keyUp as separate events, which maps exactly onto press/release,
 so hold-to-talk works from a deck key the same way it works from a held key.
 
@@ -31,11 +31,11 @@ ACTIONS = ("ask_voice", "ask_screen", "ask_broadcast", "cancel")
 
 def default_socket_path() -> Path:
     runtime = os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}"
-    return Path(runtime) / "gamepilot.sock"
+    return Path(runtime) / "gamehail.sock"
 
 
 class ControlServer:
-    """Serves control commands against a live :class:`~gamepilot.pipeline.Pipeline`."""
+    """Serves control commands against a live :class:`~gamehail.pipeline.Pipeline`."""
 
     def __init__(self, pipeline, path: Path | None = None):
         self.pipeline = pipeline
@@ -124,7 +124,7 @@ class ControlServer:
                     return
 
     def start(self) -> Path:
-        override = os.environ.get("GAMEPILOT_SOCKET")
+        override = os.environ.get("GAMEHAIL_SOCKET")
         if override:
             self.path = Path(override)
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -135,7 +135,7 @@ class ControlServer:
                 probe.settimeout(0.5)
                 probe.connect(str(self.path))
                 probe.close()
-                raise RuntimeError(f"another gamepilot is listening on {self.path}")
+                raise RuntimeError(f"another gamehail is listening on {self.path}")
             except (ConnectionRefusedError, FileNotFoundError, OSError):
                 self.path.unlink(missing_ok=True)
         self._sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)

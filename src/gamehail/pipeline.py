@@ -12,6 +12,7 @@ from .backends import make_backend
 from .capture.audio import Recorder
 from .capture.screen import Screenshotter
 from .config import Config
+from . import gamemodules
 from .hotkeys import HotkeyListener
 from .ipc import ControlServer
 from .stt import Transcriber
@@ -38,6 +39,9 @@ class Pipeline:
         self.state = "idle"
         self.last_question = ""
         self.last_answer = ""
+        self.module: gamemodules.GameModule | None = None
+        self._module_checked = 0.0
+        self.refresh_module(force=True)
 
     # -- ui helpers --------------------------------------------------------
     def _emit(self, kind: str, payload: str = "") -> None:
@@ -49,10 +53,53 @@ class Pipeline:
             self.state = "idle"
         self.events.put((kind, payload))
 
+    # -- game modules ------------------------------------------------------
+    def refresh_module(self, force: bool = False) -> gamemodules.GameModule | None:
+        """Pick the module for whatever is running, and reconfigure if it changed.
+
+        Detection reads /proc, so it is throttled: a question every few seconds should
+        not re-scan the process table each time.
+        """
+        now = time.monotonic()
+        if not force and now - self._module_checked < 5.0:
+            return self.module
+        self._module_checked = now
+        cfg = self.cfg.games
+        module = gamemodules.resolve(cfg.default, cfg.auto_switch, cfg.override or None)
+        if module is None or (self.module and module.id == self.module.id):
+            return self.module
+        self.apply_module(module)
+        return self.module
+
+    def apply_module(self, module: gamemodules.GameModule) -> None:
+        """Point the backend and the recogniser at one game."""
+        previous = self.module.id if self.module else None
+        self.module = module
+        backend = self.cfg.backend
+        if module.system_prompt:
+            backend.system_prompt = module.system_prompt.strip()
+        if module.allowed_tools:
+            backend.allowed_tools = list(module.allowed_tools)
+        if module.model:
+            backend.model = module.model
+        if module.effort:
+            backend.effort = module.effort
+        backend.mcp_config = module.mcp_config_path(self.cfg.work_dir)
+        self.cfg.stt.vocabulary = list(module.vocabulary)
+        self.transcriber.cfg = self.cfg.stt
+        if previous is not None:
+            # The warm session carries the old game's prompt and tools; start a new one.
+            log.info("game module %s -> %s, restarting the session", previous, module.id)
+            self.backend.reset()
+        else:
+            log.info("game module: %s (%s)", module.name, module.id)
+
     def status(self) -> dict:
         """Everything a control surface needs to label its keys."""
         return {
             "state": self.state,
+            "game": self.module.id if self.module else "",
+            "game_name": self.module.name if self.module else "",
             "busy": self._busy.locked(),
             "recording": self.recorder.active,
             "muted": not self.cfg.tts.enabled,
@@ -116,6 +163,7 @@ class Pipeline:
             log.info("dropping query: one already in flight")
             return
         try:
+            self.refresh_module()
             self._emit("status", "transcribing")
             try:
                 question = self.transcriber.transcribe(audio)
@@ -153,6 +201,7 @@ class Pipeline:
     ) -> str:
         """Run one question through the backend, streaming to speech and overlay."""
         answer: list[str] = []
+        self.refresh_module()
         route = channels or self.route_for("ask_voice")
         self.speaker.begin(route)
         self._emit("answer", "")

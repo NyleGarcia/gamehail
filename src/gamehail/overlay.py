@@ -37,7 +37,7 @@ class Overlay(QtWidgets.QWidget):
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_ShowWithoutActivating)
         self.setWindowOpacity(cfg.opacity)
-        self.setWindowTitle("gamepilot-overlay")
+        self.setWindowTitle("gamehail-overlay")
 
         root = QtWidgets.QFrame(self)
         root.setObjectName("root")
@@ -98,7 +98,7 @@ class Overlay(QtWidgets.QWidget):
         self.show()
 
     def show_answer(self, text: str) -> None:
-        self.status.setText("gamepilot")
+        self.status.setText("gamehail")
         if text:
             self.body.setText(text)
         self._place()

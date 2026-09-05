@@ -22,10 +22,10 @@ from pathlib import Path
 
 import pytest
 
-from gamepilot.ipc import ControlServer
+from gamehail.ipc import ControlServer
 from test_ipc import StubPipeline
 
-PLUGIN_DIR = Path(__file__).resolve().parent.parent / "dev.gamepilot.sdPlugin"
+PLUGIN_DIR = Path(__file__).resolve().parent.parent / "dev.gamehail.sdPlugin"
 GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"  # the RFC 6455 handshake constant
 
 
@@ -129,10 +129,10 @@ def test_key_press_reaches_the_daemon(daemon):
     accepting = threading.Thread(target=host.accept, daemon=True)
     accepting.start()
 
-    env = {**os.environ, "GAMEPILOT_SOCKET": str(socket_path)}
+    env = {**os.environ, "GAMEHAIL_SOCKET": str(socket_path)}
     proc = subprocess.Popen(
         [sys.executable, str(PLUGIN_DIR / "plugin.py"),
-         "-port", str(host.port), "-pluginUUID", "dev.gamepilot",
+         "-port", str(host.port), "-pluginUUID", "dev.gamehail",
          "-registerEvent", "registerPlugin", "-info", "{}"],
         env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
     )
@@ -143,7 +143,7 @@ def test_key_press_reaches_the_daemon(daemon):
         settings = {"route": "ask_broadcast"}
         for event in ("willAppear", "keyDown", "keyUp"):
             _send_text(host.conn, {
-                "event": event, "action": "dev.gamepilot.ask", "context": context,
+                "event": event, "action": "dev.gamehail.ask", "context": context,
                 "payload": {"settings": settings},
             })
             time.sleep(0.2)
@@ -171,17 +171,17 @@ def test_preset_key_sends_its_text(daemon):
     host = MockOpenDeck()
     threading.Thread(target=host.accept, daemon=True).start()
 
-    env = {**os.environ, "GAMEPILOT_SOCKET": str(socket_path)}
+    env = {**os.environ, "GAMEHAIL_SOCKET": str(socket_path)}
     proc = subprocess.Popen(
         [sys.executable, str(PLUGIN_DIR / "plugin.py"),
-         "-port", str(host.port), "-pluginUUID", "dev.gamepilot",
+         "-port", str(host.port), "-pluginUUID", "dev.gamehail",
          "-registerEvent", "registerPlugin", "-info", "{}"],
         env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
     )
     try:
         assert host.registered.wait(15)
         _send_text(host.conn, {
-            "event": "keyDown", "action": "dev.gamepilot.preset", "context": "ctx-2",
+            "event": "keyDown", "action": "dev.gamehail.preset", "context": "ctx-2",
             "payload": {"settings": {"text": "eta to microtech", "route": "ask_voice"}},
         })
         deadline = time.monotonic() + 5

@@ -7,7 +7,7 @@ updated: 2026-09-05
 # Stream Deck / OpenDeck plugin
 
 A deck key is the better trigger for a game assistant: it needs no `input` group, and it
-cannot collide with a keybind the game already owns. `dev.gamepilot.sdPlugin` follows the
+cannot collide with a keybind the game already owns. `dev.gamehail.sdPlugin` follows the
 same shape as the OpenWave plugin — python, launched through a `run.sh` that scrubs
 OpenDeck's AppImage environment, installed by copy into `~/.config/opendeck/plugins`.
 
@@ -33,7 +33,7 @@ listener makes, so a deck key and a held hotkey take identical paths.
 
 ## The control socket
 
-The daemon listens on a Unix socket (`$XDG_RUNTIME_DIR/gamepilot.sock`), one JSON object
+The daemon listens on a Unix socket (`$XDG_RUNTIME_DIR/gamehail.sock`), one JSON object
 per line in each direction:
 
 ```json
@@ -43,19 +43,19 @@ per line in each direction:
 {"cmd": "status"}
 ```
 
-`gamepilot ctl` is the same protocol from a shell, which makes any macro system a
+`gamehail ctl` is the same protocol from a shell, which makes any macro system a
 trigger:
 
 ```bash
-gamepilot ctl press ask_voice
-gamepilot ctl release ask_voice
-gamepilot ctl ask --route ask_broadcast "eta to microtech"
-gamepilot ctl status --json
+gamehail ctl press ask_voice
+gamehail ctl release ask_voice
+gamehail ctl ask --route ask_broadcast "eta to microtech"
+gamehail ctl status --json
 ```
 
-The plugin talks to the socket directly with the standard library (`gpdeck/client.py`)
+The plugin talks to the socket directly with the standard library (`ghdeck/client.py`)
 rather than shelling out to the CLI: OpenDeck runs the plugin under its own interpreter
-environment, which cannot see gamepilot's venv.
+environment, which cannot see gamehail's venv.
 
 ## Failure behaviour
 

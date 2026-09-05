@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# Ask KWin to keep the gamepilot overlay above other windows.
+# Ask KWin to keep the gamehail overlay above other windows.
 # Wayland ignores client-side stay-on-top, so the rule has to live in KWin.
 set -euo pipefail
 
 RULES="${XDG_CONFIG_HOME:-$HOME/.config}/kwinrulesrc"
-if grep -q "gamepilot-overlay" "$RULES" 2>/dev/null; then
+if grep -q "gamehail-overlay" "$RULES" 2>/dev/null; then
   echo "rule already present in $RULES"; exit 0
 fi
 
 n=$(kreadconfig6 --file kwinrulesrc --group General --key count 2>/dev/null || echo 0)
 idx=$((n + 1))
 w() { kwriteconfig6 --file kwinrulesrc --group "$idx" --key "$1" "$2"; }
-w Description "gamepilot overlay"
-w title "gamepilot-overlay"
+w Description "gamehail overlay"
+w title "gamehail-overlay"
 w titlematch 1
 w above true
 w aboverule 3

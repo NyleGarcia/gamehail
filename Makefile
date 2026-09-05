@@ -1,4 +1,4 @@
-PLUGIN := dev.gamepilot.sdPlugin
+PLUGIN := dev.gamehail.sdPlugin
 PLUGINS_DIR := $(HOME)/.config/opendeck/plugins
 
 .PHONY: test check icons deck-validate deck-install deck-package clean
@@ -26,8 +26,8 @@ deck-install: deck-validate
 	@echo "installed to $(PLUGINS_DIR)/$(PLUGIN) — restart OpenDeck to pick it up"
 
 deck-package:
-	cd $(dir $(PLUGIN)) && zip -qr gamepilot-plugin.zip $(PLUGIN) -x '*/plugin.log' '*/__pycache__/*'
-	@echo "wrote gamepilot-plugin.zip"
+	cd $(dir $(PLUGIN)) && zip -qr gamehail-plugin.zip $(PLUGIN) -x '*/plugin.log' '*/__pycache__/*'
+	@echo "wrote gamehail-plugin.zip"
 
 clean:
 	find . -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
