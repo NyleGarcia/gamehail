@@ -75,6 +75,28 @@ A user file **merges** onto the bundled module of the same id rather than replac
 bundled `system_prompt`, `detect` and vocabulary are still inherited. Override any other
 field (`model`, `effort`, ...) the same way, in the same file.
 
+### Optional: scoping which tools SCMCP advertises
+
+SCMCP >= 1.5.0 reads `SCMCP_TOOLS` (comma-separated tool names) and only advertises
+those. This is a latency optimization, not a capability change: Claude Code searches
+for a tool before its first use in a session, and that search is measurably slower
+against SCMCP's full 25+ tools than a scoped handful - a real ~3s difference on a
+session's first question. Set it in the same shell wrapper as the stdio command:
+
+```bash
+export SCMCP_TOOLS='uex_get_commodity_prices,uex_get_commodities,uex_get_commodity_averages,uex_get_terminals,uex_get_terminal_inventory,uex_get_trade_routes,uex_get_ship_prices,uex_search_marketplace,scw_get_item,scw_get_vehicle,scw_list_vehicles,scw_search,scw_search_ships_by_vendor,sc_get_vocabulary'
+```
+
+**Keep this list in sync with what the system prompt asks for.** It's a real footgun:
+an earlier version of this list left out `uex_search_marketplace` and `scw_search`,
+which silently broke marketplace listings and fuzzy name matching - the assistant
+simply couldn't see those tools existed, and there was no error, just a wrong-looking
+answer that took a `sc_get_vocabulary`-style investigation to trace back to a scoping
+list, not a prompt or model problem. If a capability that should work doesn't,
+check this list before anything else. Leave `SCMCP_TOOLS` unset to advertise
+everything - correct by default, just a few seconds slower on a session's first
+question.
+
 ## Switching
 
 `[games] auto_switch` (on by default) picks the module whose `detect` list matches a

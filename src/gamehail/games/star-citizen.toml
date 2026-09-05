@@ -2709,6 +2709,18 @@ vocabulary_generated = [
 #     ". $HOME/.secrets/scmcp.env && export UEXTOKEN && exec node $HOME/git/SCMCP/dist/index.js",
 #   ]
 #
+# Optional: SCMCP_TOOLS (SCMCP >= 1.5.0) scopes which tools it advertises, which cuts
+# a real ~3s off the first question of a session (Claude Code searches for a tool
+# before its first use; fewer advertised tools, faster search). If you add it, keep
+# the list in sync with what the system_prompt above actually asks for - it dropped
+# uex_search_marketplace and scw_search once already, silently breaking marketplace
+# lookups and fuzzy name matching:
+#
+#   export SCMCP_TOOLS='uex_get_commodity_prices,uex_get_commodities,uex_get_commodity_averages,uex_get_terminals,uex_get_terminal_inventory,uex_get_trade_routes,uex_get_ship_prices,uex_search_marketplace,scw_get_item,scw_get_vehicle,scw_list_vehicles,scw_search,scw_search_ships_by_vendor,sc_get_vocabulary'
+#
+# Leave it unset to advertise everything - correct by default, just a few seconds
+# slower on a session's first question.
+#
 # Or point at an existing mcp.json instead of an inline table:
 #
 #   mcp_config = "~/.config/gamehail/mcp.json"
