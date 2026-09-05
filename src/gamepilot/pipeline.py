@@ -164,14 +164,17 @@ class Pipeline:
 
     # -- lifecycle ---------------------------------------------------------
     def start(self) -> None:
-        self.hotkeys.start()
-        try:
-            self.control.start()
-        except (OSError, RuntimeError) as exc:
-            log.error("control socket unavailable: %s", exc)
+        if self.cfg.hotkeys.enabled:
+            self.hotkeys.start()
+        else:
+            log.debug("keyboard/HOTAS hotkeys disabled; triggering via the control socket")
+        # The socket is the primary trigger now, so a daemon that cannot bind it has
+        # nothing to listen to - fail loudly instead of sitting there looking alive.
+        self.control.start()
 
     def close(self) -> None:
         self.control.close()
-        self.hotkeys.stop()
+        if self.cfg.hotkeys.enabled:
+            self.hotkeys.stop()
         self.speaker.close()
         self.backend.close()

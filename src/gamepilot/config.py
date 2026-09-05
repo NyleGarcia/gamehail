@@ -40,6 +40,10 @@ class BackendConfig:
 
 @dataclass
 class HotkeyConfig:
+    # Off by default: the deck plugin and the control socket cover triggering without
+    # needing membership of the `input` group, and without risking a key the game owns.
+    # Turn this on to read /dev/input directly for hold-to-talk on a key or HOTAS button.
+    enabled: bool = False
     # Held = push-to-talk. Tapped = screenshot question (voice follows if held).
     ask_voice: str = "KEY_F13"
     ask_screen: str = "KEY_F14"

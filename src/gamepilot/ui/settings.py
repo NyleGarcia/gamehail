@@ -314,16 +314,25 @@ class SettingsWindow(QtWidgets.QWidget):
         self.overlay_enabled.setChecked(self.cfg.overlay.enabled)
         form.addRow("Overlay", self.overlay_enabled)
 
+        self.hotkeys_enabled = QtWidgets.QCheckBox(
+            "Also listen for keyboard / HOTAS hotkeys")
+        self.hotkeys_enabled.setChecked(self.cfg.hotkeys.enabled)
+        self.hotkeys_enabled.setToolTip(
+            "Reads /dev/input directly, which needs membership of the `input` group. "
+            "Deck keys and `gamepilot ctl` work without it.")
+        form.addRow("Hotkeys", self.hotkeys_enabled)
+
         keys = QtWidgets.QLabel(
             f"talk: <b>{self.cfg.hotkeys.ask_voice}</b> &nbsp; "
             f"screenshot: <b>{self.cfg.hotkeys.ask_screen}</b> &nbsp; "
             f"broadcast: <b>{self.cfg.hotkeys.ask_broadcast}</b> &nbsp; "
             f"cancel: <b>{self.cfg.hotkeys.cancel}</b><br>"
             "<span style='color:#8a94a6'>Rebind in the config file; find key names "
-            "with <tt>gamepilot keys</tt>.</span>"
+            "with <tt>gamepilot keys</tt>. Triggering otherwise comes from the deck "
+            "plugin or <tt>gamepilot ctl</tt>.</span>"
         )
         keys.setWordWrap(True)
-        form.addRow("Hotkeys", keys)
+        form.addRow("", keys)
 
         base = self.cfg.path or cfgmod.DEFAULT_CONFIG_PATH
         note = QtWidgets.QLabel(
@@ -416,6 +425,7 @@ class SettingsWindow(QtWidgets.QWidget):
                 "effort": self.effort.currentText(),
             },
             "screen": {"enabled": self.screen_enabled.isChecked()},
+            "hotkeys": {"enabled": self.hotkeys_enabled.isChecked()},
             "overlay": {"enabled": self.overlay_enabled.isChecked()},
         }
         path = cfgmod.save_patch(patch, self.cfg.path)
@@ -439,6 +449,7 @@ class SettingsWindow(QtWidgets.QWidget):
         self.cfg.tts.enabled = self.tts_enabled.isChecked()
         self.cfg.stt.input_device = self.mic.currentData() or ""
         self.cfg.screen.enabled = self.screen_enabled.isChecked()
+        self.cfg.hotkeys.enabled = self.hotkeys_enabled.isChecked()
         self.cfg.backend.mode = self.mode.currentText()
         self.cfg.backend.model = self.model.currentText().strip()
         self.cfg.backend.effort = self.effort.currentText()

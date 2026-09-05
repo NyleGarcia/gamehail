@@ -8,9 +8,11 @@ updated: 2026-09-05
 
 One process, three threads plus Qt:
 
-1. **hotkeys** (`hotkeys.py`) — an evdev listener thread reads `/dev/input/event*`
-   passively and reports `(action, pressed)`. Passive reads mean the game still
-   receives the key. Requires the `input` group.
+1. **triggers** — the control socket (`ipc.py`) is the default one: a deck key,
+   `gamepilot ctl`, or any macro system sends `press` / `release`. The evdev listener
+   (`hotkeys.py`) is the same thing from a keyboard or HOTAS button and is off unless
+   `[hotkeys] enabled` is set, since it needs the `input` group. Both call
+   `Pipeline.trigger()`, so neither path is privileged.
 2. **query** (`pipeline.py`) — spawned per question. Transcribes the recorded audio,
    sends it to the backend, and forwards streamed text to speech and overlay. A
    non-blocking lock drops a second question while one is in flight.

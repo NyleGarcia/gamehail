@@ -33,6 +33,19 @@ logging.basicConfig(
 )
 log = logging.getLogger("gamepilot-deck")
 
+
+def _log_uncaught(kind, value, trace):
+    """Anything that escapes must reach the log.
+
+    OpenDeck discards a plugin's stderr, so an uncaught exception is otherwise a
+    plugin that vanishes mid-session with an empty log and dead keys - which is
+    exactly how this went wrong the first time.
+    """
+    log.critical("uncaught %s", kind.__name__, exc_info=(kind, value, trace))
+
+
+sys.excepthook = _log_uncaught
+
 ASK = "dev.gamepilot.ask"
 PRESET = "dev.gamepilot.preset"
 MUTE = "dev.gamepilot.mute"
@@ -233,6 +246,12 @@ def main():
             plugin.refresh_status()
         except ConnectionError as exc:
             log.info("host went away: %s", exc)
+            return 0
+        except OSError as exc:
+            # select() and recv() on a socket the host has torn down raise plain
+            # OSError, which is not a ConnectionError. Uncaught, it ended the process
+            # silently; the keys then look placed but do nothing.
+            log.info("socket error, exiting for a restart: %s", exc)
             return 0
         except Exception:  # noqa: BLE001
             log.exception("loop error")

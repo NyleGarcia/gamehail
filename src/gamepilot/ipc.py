@@ -124,6 +124,9 @@ class ControlServer:
                     return
 
     def start(self) -> Path:
+        override = os.environ.get("GAMEPILOT_SOCKET")
+        if override:
+            self.path = Path(override)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         if self.path.exists():
             # A leftover socket from a killed daemon would make bind() fail.
@@ -149,7 +152,9 @@ class ControlServer:
         if self._sock:
             self._sock.close()
             self._sock = None
-        self.path.unlink(missing_ok=True)
+            # Only the instance that bound the socket may remove it; a second daemon
+            # that failed to bind must not delete the live one's socket on its way out.
+            self.path.unlink(missing_ok=True)
 
 
 def send(msg: dict[str, Any], path: Path | None = None, timeout: float = 30.0) -> dict:

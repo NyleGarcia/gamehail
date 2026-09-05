@@ -8,10 +8,10 @@ No API key, no per-token bill: it drives the `claude` CLI, so it runs on your ex
 Claude Code subscription.
 
 ```
-  hold a key ──┐
-  hold a deck ─┼─► mic ──► whisper ──► claude -p (+ game MCP) ──┬─► piper ──► "me"    (your headset)
-  key or HOTAS │      + screenshot ──┘                          ├─► piper ──► "squad" (OpenWave Chat Mix ──► Discord)
-  gamepilot ctl┘                                                └─► Qt overlay + tray
+  hold a deck key ─┐
+  gamepilot ctl ───┼─► mic ──► whisper ──► claude -p (+ game MCP) ─┬─► piper ──► "me"    (your headset)
+  (keyboard: opt-in)│      + screenshot ──┘                        ├─► piper ──► "squad" (OpenWave Chat Mix ──► Discord)
+                    │                                              └─► Qt overlay + tray
 ```
 
 ## Two backend modes
@@ -38,7 +38,8 @@ cp config/config.example.toml ~/.config/gamepilot/config.toml
 cp config/mcp.example.json    ~/.config/gamepilot/mcp.json
 ```
 
-Log out and back in once, so the `input` group membership takes effect.
+Then `make deck-install` and restart OpenDeck. Nothing here needs a group change or a
+relogin — that is only for the optional keyboard hotkeys.
 
 ## Use
 
@@ -52,7 +53,14 @@ uv run gamepilot devices                  # list input devices
 
 Autostart: `cp scripts/gamepilot.service ~/.config/systemd/user/ && systemctl --user enable --now gamepilot`.
 
-## Default keys
+## Triggering
+
+Deck keys and `gamepilot ctl` are the default and need no special permissions — see
+[Stream Deck / OpenDeck](#stream-deck--opendeck) below.
+
+**Keyboard / HOTAS hotkeys are off by default.** Turn them on with `[hotkeys] enabled =
+true` (or `gamepilot run --hotkeys`) and gamepilot reads `/dev/input` directly, which
+needs membership of the `input` group:
 
 | key | action |
 |---|---|
@@ -62,12 +70,9 @@ Autostart: `cp scripts/gamepilot.service ~/.config/systemd/user/ && systemctl --
 | `KEY_F15` | cancel speech / hide overlay |
 
 Your VIRPIL sticks are evdev devices too, so `ask_voice = "BTN_TRIGGER_HAPPY5"` binds
-push-to-talk to a HOTAS button instead of a keyboard key.
-
-Hotkeys are read from `/dev/input` rather than registered with KDE, because KDE
+push-to-talk to a HOTAS button. `/dev/input` rather than a KDE shortcut, because KDE
 shortcuts fire only on press (no hold-to-talk) and Wayland has no client-side global
-grab. The devices are read, never grabbed, so the game still sees the keys — bind
-gamepilot to keys the game does not use.
+grab. Devices are read, never grabbed, so the game still sees the keys.
 
 ## Two audio channels
 

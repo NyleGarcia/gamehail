@@ -15,6 +15,10 @@ max_turns = 40                         # restart the warm session after N turns
 timeout_s = 120
 
 [hotkeys]
+# Off: triggering comes from the deck plugin or `gamepilot ctl`, neither of which needs
+# the `input` group or risks a key the game already owns. Set true to also read
+# /dev/input for hold-to-talk on a key or a HOTAS button.
+enabled = false
 # Hold to talk. Find names with `gamepilot keys`.
 ask_voice = "KEY_F13"
 ask_screen = "KEY_F14"                 # same, plus a screenshot taken on key-down

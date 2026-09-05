@@ -1,12 +1,14 @@
 [Unit]
-Description=gamepilot hotkey gaming assistant
+Description=gamepilot gaming assistant
 After=graphical-session.target
 PartOf=graphical-session.target
 
 [Service]
 Type=simple
 WorkingDirectory=%h/git/gamepilot
-ExecStart=%h/.local/bin/uv run --directory %h/git/gamepilot gamepilot run
+# The venv entry point rather than `uv run`: uv is not always on the PATH systemd
+# builds for user units, and the venv binary needs no resolution at all.
+ExecStart=%h/git/gamepilot/.venv/bin/gamepilot run
 Restart=on-failure
 RestartSec=3
 

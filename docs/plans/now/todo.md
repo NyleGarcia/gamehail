@@ -8,7 +8,6 @@ updated: 2026-09-05
 
 Verified on this machine: faster-whisper `small.en` runs on CUDA/float16 (RTX 5080), 8.9s cold load.
 
-- [ ] Join the `input` group (needs a password) if keyboard hotkeys are wanted — deck keys work without it
 - [ ] Place the deck keys in OpenDeck and set each one's route
 - [ ] Confirm the KWin rule keeps the overlay above Star Citizen in borderless mode
 - [ ] Decide whether `me` should target `openwave_personal_mix` explicitly rather than the default sink

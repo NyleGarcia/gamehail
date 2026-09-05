@@ -35,6 +35,8 @@ def cmd_run(args) -> int:
     cfg = _load(args)
     if getattr(args, "no_tray", False):
         cfg.ui.tray = False
+    if getattr(args, "hotkeys", False):
+        cfg.hotkeys.enabled = True
     events: Queue = Queue()
     pipe = Pipeline(cfg, events)
 
@@ -44,11 +46,22 @@ def cmd_run(args) -> int:
         except Exception as exc:  # noqa: BLE001 - degraded, not fatal
             logging.error("STT warmup failed: %s", exc)
 
-    pipe.start()
+    try:
+        pipe.start()
+    except (OSError, RuntimeError) as exc:
+        logging.error("cannot start: %s", exc)
+        if "another gamepilot" in str(exc):
+            logging.error("stop the running one first, or point this one elsewhere "
+                          "with GAMEPILOT_SOCKET")
+        pipe.close()
+        return 1
+    triggers = f"socket {pipe.control.path}"
+    if cfg.hotkeys.enabled:
+        triggers += (f" | keys {cfg.hotkeys.ask_voice}/{cfg.hotkeys.ask_screen}"
+                     f"/{cfg.hotkeys.ask_broadcast}")
     logging.info(
-        "gamepilot up | profile=%s backend=%s model=%s | voice=%s screen=%s cancel=%s",
-        cfg.profile, cfg.backend.mode, cfg.backend.model,
-        cfg.hotkeys.ask_voice, cfg.hotkeys.ask_screen, cfg.hotkeys.cancel,
+        "gamepilot up | profile=%s backend=%s model=%s | triggers: %s",
+        cfg.profile, cfg.backend.mode, cfg.backend.model, triggers,
     )
 
     def shutdown(*_a):
@@ -232,6 +245,8 @@ def main(argv: list[str] | None = None) -> int:
     _common(p_run)
     p_run.add_argument("--no-warmup", action="store_true", help="skip preloading the STT model")
     p_run.add_argument("--no-tray", action="store_true", help="run without the tray icon")
+    p_run.add_argument("--hotkeys", action="store_true",
+                       help="also read /dev/input for keyboard/HOTAS hotkeys")
     p_run.set_defaults(func=cmd_run)
 
     p_ask = sub.add_parser("ask", help="ask one typed question (no mic)")
