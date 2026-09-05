@@ -75,6 +75,36 @@ questions in a row does not rescan the process table three times.
 `$HOME` and other environment variables are expanded in `command` and `args`, so a
 module stays portable between machines.
 
+## Vocabulary: two tiers, regenerated from the game's own MCP server
+
+`vocabulary_static` is hand-picked and always present - ships, locations, jargon that
+isn't a tradeable item and so nothing can generate it. `vocabulary_generated` is filled
+by `scripts/vocab/<id>.py`, which calls the game's MCP server rather than duplicating
+its data-fetching logic. For Star Citizen that's `sc_get_vocabulary` (SCMCP >= 1.2.0),
+itself merging locally extracted names (`SCMCP_GAME_DATA_DIR` - ore signatures,
+blueprints, Wikelo trades: exactly the invented words no public API exposes) with
+tradeable commodity and manufacturer names from UEX/SCW.
+
+The precedence is local-first at two levels:
+
+1. **The builder script** reads a checked-in snapshot
+   (`src/gamehail/games/data/<id>.vocab.json`) by default - instant, no network, no
+   token, ships in the repo. `--refresh` calls the MCP server instead and rewrites the
+   snapshot on success; if the server can't be reached, the existing snapshot is left
+   alone rather than the module losing its vocabulary.
+2. **The MCP server itself** prefers local gamedata over the public API for the same
+   reason - it's the richer, more game-specific source, and the API is what's always
+   available as a fallback.
+
+```bash
+uv run python scripts/vocab/star-citizen.py             # snapshot, instant, offline
+uv run python scripts/vocab/star-citizen.py --refresh    # re-fetch via SCMCP
+SCMCP_GAME_DATA_DIR=~/git/StarBreaker/out uv run python scripts/vocab/star-citizen.py --refresh
+```
+
+Never hand-edit `vocabulary_generated` - the next `--refresh` overwrites it. Add
+permanent, hand-picked terms to `vocabulary_static` instead.
+
 ## Adding one
 
 ```bash

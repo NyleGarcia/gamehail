@@ -42,6 +42,13 @@ class GameModule:
     detect: list[str] = field(default_factory=list)
     system_prompt: str = ""
     allowed_tools: list[str] = field(default_factory=list)
+    # Words Whisper has never met. Two sources feed the one list actually used:
+    # `vocabulary` (or `vocabulary_static`) is gamedata - hand-picked, ships in the repo,
+    # works with no network and no API key. `vocabulary_generated` is filled by a
+    # scripts/vocab/<id>.py builder that hits the game's own API (UEX/SCW for Star
+    # Citizen) when one is reachable; when it is not, whatever was last generated stays
+    # in the file, so gamedata is always the fallback - there is no runtime dependency
+    # on the API being up.
     vocabulary: list[str] = field(default_factory=list)
     mcp: dict[str, Any] = field(default_factory=dict)
     mcp_config: Path | None = None  # an existing mcp.json, instead of inline [mcp.*]
@@ -54,13 +61,20 @@ class GameModule:
         data = tomllib.loads(path.read_text())
         game = data.get("game", data)
         mcp_config = game.get("mcp_config")
+        # Order preserved, duplicates dropped: a term in both stays where gamedata put
+        # it, so a hand-picked entry's position (and any comment above it) is stable
+        # across regenerations of the generated half.
+        seen: dict[str, None] = {}
+        for term in (*game.get("vocabulary", []), *game.get("vocabulary_static", []),
+                    *game.get("vocabulary_generated", [])):
+            seen.setdefault(term, None)
         return cls(
             id=game.get("id") or path.stem,
             name=game.get("name") or path.stem,
             detect=list(game.get("detect", [])),
             system_prompt=game.get("system_prompt", ""),
             allowed_tools=list(game.get("allowed_tools", [])),
-            vocabulary=list(game.get("vocabulary", [])),
+            vocabulary=list(seen),
             mcp=data.get("mcp", {}),
             mcp_config=Path(os.path.expandvars(mcp_config)).expanduser() if mcp_config else None,
             model=game.get("model"),
