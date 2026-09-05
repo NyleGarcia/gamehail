@@ -149,7 +149,8 @@ class Speaker:
             "pw-play", "--raw",
             "--format", "s16", "--rate", str(rate), "--channels", "1",
             "--volume", str(ch.volume),
-            "--media-role", "Notification",
+            # No --media-role: WirePlumber's role policy ducks a Notification stream,
+            # which measured ~25 dB down at the headphones - inaudible under game audio.
             "-P", f'{{ application.name = "{ch.app_name}" '
                   f'media.name = "gamepilot {ch.name}" }}',
         ]

@@ -87,8 +87,11 @@ plus the `application.name` the stream carries:
 
 | channel | target | who hears it |
 |---|---|---|
-| `me` | `default` (or `openwave_personal_mix`) | you |
+| `me` | `openwave_personal_mix` | you |
 | `squad` | `openwave_chat_mix` | everyone on voice comms — Discord captures Monitor of OpenWave Chat Mix |
+
+Aim a channel at a **mix**, not at `default`: the default sink is an OpenWave *source*
+row, and its trim and send left answers ~21 dB down at the headphones.
 
 `[tts.routes]` decides which hotkey speaks where, so private questions stay private and
 `KEY_F16` answers out loud to the group. Give each channel its own `app_name` and

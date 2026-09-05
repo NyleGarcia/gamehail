@@ -50,6 +50,30 @@ Two ways to wire it, both only a `target` change:
 Verified here with both channels speaking at once: `gamepilot` on the default sink and
 `gamepilot-squad` on `openwave_chat_mix`, as two simultaneous sink-inputs.
 
+## Aim at a mix, not at "default"
+
+Measured at the headphones with the same sentence, played three ways:
+
+| routing | peak |
+|---|---|
+| default sink, `--media-role Notification` | 0.048 |
+| default sink, no role | 0.084 |
+| `--target openwave_personal_mix` | 1.000 |
+
+Going through the default sink means going through whichever OpenWave *source* row it
+happens to be (here `openwave_src_system`), and that row's trim and send left the answer
+~21 dB down — audible in a quiet room, gone under a game. The Notification media role
+costs another ~5 dB on top, because WirePlumber's role policy ducks it. So channels
+target a mix sink directly and set no media role.
+
+If a channel ever goes quiet again, record the monitor and measure rather than guess:
+
+```bash
+parec --device=openwave_personal_mix.monitor --format=s16le --rate=48000 --channels=2 \
+  > /tmp/probe.raw &
+gamepilot ctl ask "say exactly: audio check"
+```
+
 ## Playback mechanics
 
 Each sentence is synthesised once per distinct voice, then the same PCM is written to

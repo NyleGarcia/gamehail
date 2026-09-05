@@ -46,8 +46,11 @@ player = "pw-play"                     # "pw-play" routes per channel; "aplay" c
 # an app-source row to - give each channel its own so they get their own matrix row.
 # Check names with `gamepilot channels`, test with `gamepilot say hello --channel squad`.
 [[tts.channels]]
+# Target the mix itself, not "default". Playing into the default sink means going
+# through whichever OpenWave source row it happens to be, and that arrived ~21 dB down
+# at the headphones - fine in a quiet room, lost under a game.
 name = "me"
-target = "default"                     # or "openwave_personal_mix"
+target = "openwave_personal_mix"
 app_name = "gamepilot"
 volume = 1.0
 
