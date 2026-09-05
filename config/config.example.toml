@@ -1,0 +1,62 @@
+# gamepilot config -> copy to ~/.config/gamepilot/config.toml
+profile = "star-citizen"
+work_dir = "/tmp/gamepilot"
+
+[backend]
+# "persistent" keeps one `claude` process warm: ~1s follow-ups, context carries over.
+# "oneshot" spawns a fresh process per question: ~3s, no memory between questions.
+mode = "persistent"
+model = "sonnet"                       # sonnet | opus | haiku | full model id
+mcp_config = "~/.config/gamepilot/mcp.json"
+permission_mode = "dontAsk"
+restricted = true                      # drop Bash / code-running tools
+effort = "low"
+max_turns = 40                         # restart the warm session after N turns
+timeout_s = 120
+
+[hotkeys]
+# Hold to talk. Find names with `gamepilot keys`.
+ask_voice = "KEY_F13"
+ask_screen = "KEY_F14"                 # same, plus a screenshot taken on key-down
+cancel = "KEY_F15"                     # shut up / hide overlay
+min_hold_ms = 150
+# devices = ["/dev/input/event5"]      # empty = autodetect
+
+[stt]
+model = "small.en"                     # tiny.en | base.en | small.en | medium.en
+device = "auto"                        # auto -> try CUDA, fall back to CPU
+language = "en"
+max_seconds = 30
+
+[tts]
+enabled = true
+voice_model = "~/.local/share/gamepilot/voices/en_US-amy-medium.onnx"
+
+[screen]
+enabled = true
+mode = "active"                        # active window (the game) | full desktop
+max_width = 1280                       # downscale: ~1.2k input tokens instead of ~2.8k
+quality = 4
+
+[overlay]
+enabled = true
+corner = "top-right"
+width = 620
+font_size = 15
+hide_after_s = 20
+
+# ---- per-game profiles -------------------------------------------------------
+[profiles.star-citizen.backend]
+system_prompt = """
+You are a live Star Citizen assistant. The player is flying and cannot read long text.
+Answer in at most 3 short sentences. Lead with the number or the name they asked for.
+No preamble, no markdown, no bullet lists. Always use the scmcp tools for prices,
+terminals, trade routes, ships and items - never answer from memory.
+"""
+allowed_tools = ["Read", "mcp__scmcp"]
+
+[profiles.default.backend]
+system_prompt = """
+You are a live in-game assistant. Answer in at most 3 short sentences, no markdown.
+"""
+allowed_tools = ["Read"]

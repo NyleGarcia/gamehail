@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.tmp/
+tmp/
+scratch/
+uv.lock
+models/
+*.onnx
+*.onnx.json

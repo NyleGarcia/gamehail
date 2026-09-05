@@ -1,0 +1,14 @@
+[Unit]
+Description=gamepilot hotkey gaming assistant
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/git/gamepilot
+ExecStart=%h/.local/bin/uv run --directory %h/git/gamepilot gamepilot run
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=graphical-session.target

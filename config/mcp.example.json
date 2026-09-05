@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "scmcp": {
+      "command": "sh",
+      "args": [
+        "-c",
+        ". $HOME/.secrets/scmcp.env && export UEXTOKEN && exec node $HOME/git/SCMCP/dist/index.js"
+      ]
+    }
+  }
+}
