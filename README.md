@@ -52,10 +52,15 @@ uv sync
 ./scripts/fetch-voice.sh           # piper voice (en_US-amy-medium)
 ./scripts/install-kwin-rule.sh     # keeps the overlay above the game (KWin)
 
-mkdir -p ~/.config/gamehail
+mkdir -p ~/.config/gamehail/games
 cp config/config.example.toml ~/.config/gamehail/config.toml
-cp config/mcp.example.json    ~/.config/gamehail/mcp.json
 ```
+
+Each game module says which MCP server it needs but not where it runs - that choice is
+yours. Copy the module you want (`src/gamehail/games/star-citizen.toml`) into
+`~/.config/gamehail/games/`, and add an `[mcp.scmcp]` block: a gateway URL if you run
+SCMCP hosted somewhere, or a local command if you run it as a stdio checkout. Both
+shapes are documented at the bottom of the module file itself.
 
 Then `make deck-install` and restart OpenDeck. Nothing here needs a group change or a
 relogin — that is only for the optional keyboard hotkeys.

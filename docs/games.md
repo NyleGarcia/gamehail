@@ -49,6 +49,32 @@ command = "sh"
 args = ["-c", ". $HOME/.secrets/scmcp.env && exec node $HOME/git/SCMCP/dist/index.js"]
 ```
 
+## Where a game's MCP server runs is your choice, not the module's
+
+A shipped module says a game needs `mcp.scmcp` in `allowed_tools` - it does not say
+where that server runs. Baking a local stdio path into a module that ships in the repo
+only works on the machine it was written on. Point it at your own setup in
+`~/.config/gamehail/games/<id>.toml`:
+
+```toml
+# Gateway - a hosted server reachable over HTTP, nothing to run locally
+[mcp.scmcp]
+type = "http"
+url = "https://your-gateway.example/servers/scmcp/mcp/"
+```
+
+```toml
+# Local - a checkout on this machine, spoken to over stdio
+[mcp.scmcp]
+command = "sh"
+args = ["-c", ". $HOME/.secrets/scmcp.env && exec node $HOME/git/SCMCP/dist/index.js"]
+```
+
+A user file **merges** onto the bundled module of the same id rather than replacing it
+- `[game]` and `[mcp]` merge key-by-key - so adding just `[mcp.scmcp]` is enough; the
+bundled `system_prompt`, `detect` and vocabulary are still inherited. Override any other
+field (`model`, `effort`, ...) the same way, in the same file.
+
 ## Switching
 
 `[games] auto_switch` (on by default) picks the module whose `detect` list matches a

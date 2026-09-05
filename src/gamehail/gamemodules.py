@@ -58,7 +58,10 @@ class GameModule:
 
     @classmethod
     def from_toml(cls, path: Path) -> "GameModule":
-        data = tomllib.loads(path.read_text())
+        return cls.from_data(tomllib.loads(path.read_text()), source=path)
+
+    @classmethod
+    def from_data(cls, data: dict[str, Any], source: Path | None = None) -> "GameModule":
         game = data.get("game", data)
         mcp_config = game.get("mcp_config")
         # Order preserved, duplicates dropped: a term in both stays where gamedata put
@@ -68,9 +71,10 @@ class GameModule:
         for term in (*game.get("vocabulary", []), *game.get("vocabulary_static", []),
                     *game.get("vocabulary_generated", [])):
             seen.setdefault(term, None)
+        stem = source.stem if source else None
         return cls(
-            id=game.get("id") or path.stem,
-            name=game.get("name") or path.stem,
+            id=game.get("id") or stem,
+            name=game.get("name") or stem,
             detect=list(game.get("detect", [])),
             system_prompt=game.get("system_prompt", ""),
             allowed_tools=list(game.get("allowed_tools", [])),
@@ -79,7 +83,7 @@ class GameModule:
             mcp_config=Path(os.path.expandvars(mcp_config)).expanduser() if mcp_config else None,
             model=game.get("model"),
             effort=game.get("effort"),
-            source=path,
+            source=source,
         )
 
     def mcp_config_path(self, work_dir: Path) -> Path | None:
@@ -95,7 +99,7 @@ class GameModule:
         servers = {}
         for name, entry in self.mcp.items():
             server = dict(entry)
-            for key in ("command",):
+            for key in ("command", "url"):
                 if key in server:
                     server[key] = os.path.expandvars(str(server[key]))
             if "args" in server:
@@ -107,18 +111,60 @@ class GameModule:
         return out
 
 
-def discover() -> dict[str, GameModule]:
-    modules: dict[str, GameModule] = {}
-    for directory in (BUNDLED_DIR, user_dir()):
-        if not directory.is_dir():
+def _load_raw(directory: Path) -> dict[str, tuple[Path, dict[str, Any]]]:
+    """Parsed TOML for every module file in a directory, keyed by game id."""
+    found: dict[str, tuple[Path, dict[str, Any]]] = {}
+    if not directory.is_dir():
+        return found
+    for path in sorted(directory.glob("*.toml")):
+        try:
+            data = tomllib.loads(path.read_text())
+        except (OSError, tomllib.TOMLDecodeError) as exc:
+            log.error("ignoring game module %s: %s", path, exc)
             continue
-        for path in sorted(directory.glob("*.toml")):
-            try:
-                module = GameModule.from_toml(path)
-            except (OSError, tomllib.TOMLDecodeError, TypeError) as exc:
-                log.error("ignoring game module %s: %s", path, exc)
-                continue
-            modules[module.id] = module
+        game_id = data.get("game", data).get("id") or path.stem
+        found[game_id] = (path, data)
+    return found
+
+
+def _merge_module_data(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    """A user module adds to and overrides a bundled one of the same id - it does not
+    replace it. Without this, adding just an [mcp.*] block in the user file would
+    silently drop the bundled system_prompt and vocabulary, defeating the reason
+    vocabulary_static exists (surviving an update) the moment MCP config moves out of
+    the bundled file and into the user's.
+    """
+    merged = dict(base)
+    base_game, override_game = base.get("game", {}), override.get("game", {})
+    if base_game or override_game:
+        merged["game"] = {**base_game, **override_game}
+    base_mcp, override_mcp = base.get("mcp", {}), override.get("mcp", {})
+    if base_mcp or override_mcp:
+        # Per-server, not whole-table: a user adding [mcp.scmcp] must not remove a
+        # bundled [mcp.other_server] the same module also declared.
+        merged["mcp"] = {**base_mcp, **override_mcp}
+    for key in ("mcp_config",):
+        if key in override:
+            merged[key] = override[key]
+    return merged
+
+
+def discover() -> dict[str, GameModule]:
+    bundled = _load_raw(BUNDLED_DIR)
+    user = _load_raw(user_dir())
+
+    modules: dict[str, GameModule] = {}
+    for game_id in {*bundled, *user}:
+        if game_id in bundled and game_id in user:
+            path, data = user[game_id][0], _merge_module_data(bundled[game_id][1], user[game_id][1])
+        elif game_id in user:
+            path, data = user[game_id]
+        else:
+            path, data = bundled[game_id]
+        try:
+            modules[game_id] = GameModule.from_data(data, source=path)
+        except TypeError as exc:
+            log.error("ignoring game module %s: %s", path, exc)
     return modules
 
 

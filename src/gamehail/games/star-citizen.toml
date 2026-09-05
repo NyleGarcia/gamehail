@@ -191,10 +191,27 @@ vocabulary_generated = [
   "Year of the Rooster Envelope",
 ]
 
-# The MCP server that knows the game. $HOME is expanded; point it at your own checkout.
-[mcp.scmcp]
-command = "sh"
-args = [
-  "-c",
-  ". $HOME/.secrets/scmcp.env && export UEXTOKEN && exec node $HOME/git/SCMCP/dist/index.js",
-]
+# No [mcp.scmcp] here on purpose: where SCMCP runs is your choice, not something a
+# shipped module should hardcode - a stdio path baked in only works on the machine it
+# was written on. Configure it in ~/.config/gamehail/games/star-citizen.toml (that file
+# wins over this one by id - see the top of this file), picking whichever of the two
+# shapes below fits how you run SCMCP. `gamehail games` shows "mcp: -" until you do.
+#
+# Gateway (a hosted SCMCP reachable over HTTP - nothing to run locally):
+#
+#   [mcp.scmcp]
+#   type = "http"
+#   url = "https://your-gateway.example/servers/scmcp/mcp/"
+#
+# Local (stdio, a checkout on this machine - $HOME and other env vars are expanded):
+#
+#   [mcp.scmcp]
+#   command = "sh"
+#   args = [
+#     "-c",
+#     ". $HOME/.secrets/scmcp.env && export UEXTOKEN && exec node $HOME/git/SCMCP/dist/index.js",
+#   ]
+#
+# Or point at an existing mcp.json instead of an inline table:
+#
+#   mcp_config = "~/.config/gamehail/mcp.json"

@@ -105,3 +105,70 @@ def test_switching_module_reconfigures_the_pipeline(tmp_path, monkeypatch):
         assert "Star Citizen" in cfg.backend.system_prompt
     finally:
         pipe.close()
+
+
+def test_user_module_merges_onto_bundled_one_instead_of_replacing_it(tmp_path, monkeypatch):
+    """The whole reason to split vocabulary_static from vocabulary_generated is that it
+    survives an update - that breaks the moment adding [mcp.*] in the user file requires
+    duplicating (and thus forking) the bundled system_prompt and vocabulary."""
+    monkeypatch.setattr(gamemodules, "user_dir", lambda: tmp_path)
+    write(tmp_path, "star-citizen", '''
+[mcp.scmcp]
+type = "http"
+url = "https://gateway.example/servers/scmcp/mcp/"
+''')
+    sc = gamemodules.discover()["star-citizen"]
+    assert sc.mcp == {"scmcp": {"type": "http", "url": "https://gateway.example/servers/scmcp/mcp/"}}
+    assert "Star Citizen" in sc.system_prompt      # inherited, not dropped
+    assert "laranite" in sc.vocabulary             # inherited, not dropped
+    assert sc.detect == ["StarCitizen.exe", "RSI Launcher", "StarCitizen_Launcher"]
+
+
+def test_user_module_can_override_a_bundled_field_while_keeping_others(tmp_path, monkeypatch):
+    monkeypatch.setattr(gamemodules, "user_dir", lambda: tmp_path)
+    write(tmp_path, "star-citizen", '''
+[game]
+model = "opus"
+''')
+    sc = gamemodules.discover()["star-citizen"]
+    assert sc.model == "opus"
+    assert "Star Citizen" in sc.system_prompt
+
+
+def test_user_mcp_server_is_added_alongside_a_bundled_one_not_instead_of_it(tmp_path, monkeypatch):
+    monkeypatch.setattr(gamemodules, "user_dir", lambda: tmp_path)
+    write(tmp_path, "hasmcp", '''
+[game]
+id = "hasmcp"
+
+[mcp.first]
+command = "one"
+''')
+    bundled_dir = tmp_path / "bundled"
+    monkeypatch.setattr(gamemodules, "BUNDLED_DIR", bundled_dir)
+    write(bundled_dir, "hasmcp", '''
+[game]
+id = "hasmcp"
+
+[mcp.second]
+command = "two"
+''')
+    sc = gamemodules.discover()["hasmcp"]
+    assert set(sc.mcp) == {"first", "second"}
+
+
+def test_http_mcp_server_passes_through_with_url_env_expansion(tmp_path, monkeypatch):
+    monkeypatch.setattr(gamemodules, "user_dir", lambda: tmp_path)
+    monkeypatch.setenv("GATEWAY_HOST", "gateway.example")
+    write(tmp_path, "gw", '''
+[game]
+id = "gw"
+
+[mcp.thing]
+type = "http"
+url = "https://$GATEWAY_HOST/mcp/"
+''')
+    module = gamemodules.discover()["gw"]
+    path = module.mcp_config_path(tmp_path / "work")
+    data = json.loads(path.read_text())
+    assert data["mcpServers"]["thing"] == {"type": "http", "url": "https://gateway.example/mcp/"}
