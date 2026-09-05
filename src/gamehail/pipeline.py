@@ -223,6 +223,24 @@ class Pipeline:
         return text
 
     # -- lifecycle ---------------------------------------------------------
+    def warmup_backend(self) -> None:
+        """Pay the first-turn cost once at startup instead of on the pilot's first real
+        question. Claude Code defers loading MCP tool schemas until searched for -
+        measured here at several extra seconds on a session's first tool call, gone by
+        the second. The warmup question must actually call a tool (a trivial one) to pay
+        that cost; a tool-free reply would warm nothing. Runs the backend directly,
+        bypassing ask()'s UI events - nothing should flash on the overlay or be spoken.
+        """
+        try:
+            for chunk in self.backend.ask(
+                "Use a scmcp tool to fetch the current sell price for Laranite, then "
+                "reply with just the number. This is a warmup call, not a real question."
+            ):
+                if chunk.final:
+                    break
+        except Exception as exc:  # noqa: BLE001 - a slow first real question, not fatal
+            log.warning("backend warmup failed: %s", exc)
+
     def start(self) -> None:
         if self.cfg.hotkeys.enabled:
             self.hotkeys.start()

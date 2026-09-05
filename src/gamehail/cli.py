@@ -6,6 +6,7 @@ import argparse
 import logging
 import os
 import signal
+import threading
 import sys
 from pathlib import Path
 from queue import Queue
@@ -50,6 +51,13 @@ def cmd_run(args) -> int:
             pipe.transcriber.warmup()
         except Exception as exc:  # noqa: BLE001 - degraded, not fatal
             logging.error("STT warmup failed: %s", exc)
+
+    if cfg.backend.mode == "persistent" and not args.no_warmup:
+        # Backend warmup pays Claude Code's first-turn ToolSearch cost now, on a
+        # background thread, so it does not delay the control socket coming up and is
+        # (usually) done before the pilot's first real question arrives.
+        threading.Thread(target=pipe.warmup_backend, name="backend-warmup",
+                         daemon=True).start()
 
     try:
         pipe.start()
