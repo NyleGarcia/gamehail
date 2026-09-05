@@ -6,6 +6,7 @@ still writing the rest of the answer.
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 import shutil
@@ -35,6 +36,23 @@ class Speaker:
         self._proc: subprocess.Popen | None = None
         self._stop = threading.Event()
         self._buffer = ""
+
+    def _samplerate(self) -> int:
+        """Piper voices ship their sample rate in the sidecar json (16k or 22.05k)."""
+        model = self.cfg.voice_model
+        sidecar = model.with_suffix(model.suffix + ".json") if model else None
+        if sidecar and sidecar.is_file():
+            try:
+                return int(json.loads(sidecar.read_text())["audio"]["sample_rate"])
+            except (KeyError, ValueError, OSError) as exc:
+                log.warning("could not read sample rate from %s: %s", sidecar, exc)
+        return 22050
+
+    def _player_cmd(self) -> list[str]:
+        cmd = list(self.cfg.player)
+        if "-r" in cmd:
+            cmd[cmd.index("-r") + 1] = str(self._samplerate())
+        return cmd
 
     @property
     def available(self) -> bool:
@@ -73,7 +91,7 @@ class Speaker:
                 piper, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
             )
             player = subprocess.Popen(
-                self.cfg.player, stdin=self._proc.stdout, stderr=subprocess.DEVNULL
+                self._player_cmd(), stdin=self._proc.stdout, stderr=subprocess.DEVNULL
             )
             assert self._proc.stdin is not None
             self._proc.stdin.write(text.encode())
