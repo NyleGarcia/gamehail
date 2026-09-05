@@ -356,13 +356,17 @@ class SettingsWindow(QtWidgets.QWidget):
         """Speak a phrase through one channel using the values currently on screen."""
         from ..tts import Speaker
 
-        channel = TtsChannel(**{**values, "enabled": True,
-                                "voice_model": self.cfg.tts.voice_model
-                                if "voice_model" not in values else values["voice_model"]})
+        from pathlib import Path as _Path
+
+        chosen = values.get("voice_model")
+        channel = TtsChannel(**{
+            **values, "enabled": True,
+            "voice_model": _Path(chosen) if chosen else self.cfg.tts.voice_model,
+        })
         probe_cfg = cfgmod.replace(self.cfg.tts, channels=[channel], enabled=True)
         speaker = Speaker(probe_cfg)
         if not speaker.available:
-            self.status.setText("no voice model — run ./scripts/fetch-voice.sh")
+            self.status.setText(f"cannot speak: {speaker.unavailable_reason}")
             return
         speaker.begin([channel.name])
         speaker.feed(f"gamepilot on channel {channel.name}. ")

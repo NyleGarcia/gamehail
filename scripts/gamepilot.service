@@ -11,6 +11,9 @@ WorkingDirectory=%h/git/gamepilot
 ExecStart=%h/git/gamepilot/.venv/bin/gamepilot run
 Restart=on-failure
 RestartSec=3
+# Shutdown closes the warm claude session and any speech in flight; the default stop
+# timeout on this system is short enough to SIGKILL through it.
+TimeoutStopSec=25
 
 [Install]
 WantedBy=graphical-session.target

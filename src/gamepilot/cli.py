@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import signal
 import sys
 from pathlib import Path
@@ -64,17 +65,16 @@ def cmd_run(args) -> int:
         cfg.profile, cfg.backend.mode, cfg.backend.model, triggers,
     )
 
-    def shutdown(*_a):
-        events.put(("quit", ""))
-
-    signal.signal(signal.SIGINT, shutdown)
-    signal.signal(signal.SIGTERM, shutdown)
-
     try:
         if cfg.overlay.enabled or cfg.ui.tray:
             from .ui.app import run_ui
 
             return run_ui(cfg, events, pipe)
+        def shutdown(*_a):
+            events.put(("quit", ""))
+
+        signal.signal(signal.SIGINT, shutdown)
+        signal.signal(signal.SIGTERM, shutdown)
         while True:  # headless: drain events so the queue cannot grow unbounded
             kind, payload = events.get()
             if kind == "quit":
@@ -82,7 +82,15 @@ def cmd_run(args) -> int:
             if kind in ("status", "answer") and payload:
                 print(payload, flush=True)
     finally:
+        logging.info("shutting down")
         pipe.close()
+        logging.info("stopped")
+        # CUDA and Qt both keep native threads alive that can stall interpreter
+        # shutdown past systemd's stop timeout. Everything of ours is closed by here,
+        # so leave immediately rather than be SIGKILLed a few seconds later.
+        sys.stdout.flush()
+        sys.stderr.flush()
+        os._exit(0)
 
 
 def cmd_ask(args) -> int:

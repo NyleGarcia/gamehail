@@ -17,6 +17,7 @@ import logging
 import re
 import shutil
 import subprocess
+import sys
 import threading
 from pathlib import Path
 from queue import Empty, Queue
@@ -31,6 +32,20 @@ _MARKUP = re.compile(r"[*_`#>]|\[[^\]]*\]\([^)]*\)")
 
 def strip_markup(text: str) -> str:
     return _MARKUP.sub("", text).strip()
+
+
+def piper_binary() -> str | None:
+    """Locate piper without trusting PATH.
+
+    piper is installed inside the venv, and systemd builds a PATH for user units that
+    does not include it - so `shutil.which` finds it in a shell and not in the service,
+    which makes the daemon silently mute. Look next to the running interpreter too.
+    """
+    found = shutil.which("piper")
+    if found:
+        return found
+    beside = Path(sys.executable).parent / "piper"
+    return str(beside) if beside.is_file() else None
 
 
 def voice_samplerate(model: Path | None) -> int:
@@ -73,14 +88,22 @@ class Speaker:
         return ch.voice_model or self.cfg.voice_model
 
     @property
+    def unavailable_reason(self) -> str | None:
+        """Why speech is off, in words a settings window can show."""
+        if not self.cfg.enabled:
+            return "speech is switched off"
+        if not piper_binary():
+            return "piper not found — run `uv sync`"
+        if not any(ch.enabled for ch in self.cfg.channels):
+            return "no output channel is enabled"
+        for ch in self.cfg.channels:
+            if ch.enabled and (voice := self.voice_for(ch)) and Path(voice).exists():
+                return None
+        return "no voice model — pick one under Get more voices…"
+
+    @property
     def available(self) -> bool:
-        if not (self.cfg.enabled and shutil.which("piper")):
-            return False
-        return any(
-            (v := self.voice_for(ch)) and v.exists()
-            for ch in self.cfg.channels
-            if ch.enabled
-        )
+        return self.unavailable_reason is None
 
     # -- worker ------------------------------------------------------------
     def _ensure_worker(self) -> None:
@@ -103,7 +126,11 @@ class Speaker:
 
     # -- synthesis + playback ----------------------------------------------
     def _synth(self, text: str, voice: Path) -> bytes:
-        cmd = ["piper", "--model", str(voice), "--output-raw"]
+        piper = piper_binary()
+        if not piper:
+            log.error("piper not found; cannot speak")
+            return b""
+        cmd = [piper, "--model", str(voice), "--output-raw"]
         if self.cfg.speaker is not None:
             cmd += ["--speaker", str(self.cfg.speaker)]
         if self.cfg.length_scale is not None:
@@ -139,6 +166,7 @@ class Speaker:
         by_voice: dict[Path, list[TtsChannel]] = {}
         for ch in channels:
             voice = self.voice_for(ch)
+            voice = Path(voice) if voice else None
             if not voice or not voice.exists():
                 log.warning("channel %s has no usable voice model", ch.name)
                 continue

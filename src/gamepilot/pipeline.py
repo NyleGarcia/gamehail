@@ -167,8 +167,10 @@ class Pipeline:
         text = "".join(answer).strip()
         self.last_answer = text
         log.info("A (%.1fs, -> %s): %s", time.monotonic() - started, ",".join(route), text)
-        if not text:
-            self._emit("answer", "no answer")
+        # The streamed text arrived as `append` events, which say nothing about being
+        # finished. Without this closing event the state stays on the question: the
+        # deck key sits on "thinking…", and the overlay never starts its hide timer.
+        self._emit("answer", text or "no answer")
         return text
 
     # -- lifecycle ---------------------------------------------------------
@@ -182,8 +184,15 @@ class Pipeline:
         self.control.start()
 
     def close(self) -> None:
-        self.control.close()
-        if self.cfg.hotkeys.enabled:
-            self.hotkeys.stop()
-        self.speaker.close()
-        self.backend.close()
+        for step, shutdown in (
+            ("control socket", self.control.close),
+            ("hotkeys", self.hotkeys.stop if self.cfg.hotkeys.enabled else lambda: None),
+            ("speech", self.speaker.close),
+            ("claude session", self.backend.close),
+        ):
+            started = time.monotonic()
+            try:
+                shutdown()
+            except Exception as exc:  # noqa: BLE001 - one bad step must not strand the rest
+                log.warning("closing %s failed: %s", step, exc)
+            log.debug("closed %s in %.2fs", step, time.monotonic() - started)

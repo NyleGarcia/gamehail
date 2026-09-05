@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import signal
 from queue import Empty, Queue
 
 from PyQt6 import QtCore, QtWidgets
@@ -71,7 +72,22 @@ def run_ui(cfg: Config, events: Queue, pipeline=None) -> int:
         else:
             log.warning("no system tray available on this desktop")
 
-    Dispatcher(events, overlay, tray)
+    # Parented to the application: an unparented QObject assigned to nothing is
+    # collected as soon as this line returns, and its QTimer goes with it. That leaves
+    # the event queue unpolled - no overlay, no tray updates - and, because nothing
+    # Python-side ever runs during app.exec(), no signal handling either.
+    dispatcher = Dispatcher(events, overlay, tray, parent=app)
+    assert dispatcher.parent() is app
+
+    # Python only runs signal handlers when it has the interpreter, which inside
+    # app.exec() happens on the dispatcher's timer. Installing them here - after the
+    # QApplication exists - means SIGTERM from `systemctl stop` quits the loop instead
+    # of waiting for the kill that follows the stop timeout.
+    def _quit(_signum, _frame):
+        events.put(("quit", ""))
+
+    signal.signal(signal.SIGTERM, _quit)
+    signal.signal(signal.SIGINT, _quit)
     return app.exec()
 
 
