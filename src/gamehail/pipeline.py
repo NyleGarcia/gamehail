@@ -90,7 +90,7 @@ class Pipeline:
         if previous is not None:
             # The warm session carries the old game's prompt and tools; start a new one.
             log.info("game module %s -> %s, restarting the session", previous, module.id)
-            self.backend.reset()
+            self.reset_backend()
         else:
             log.info("game module: %s (%s)", module.name, module.id)
 
@@ -223,6 +223,18 @@ class Pipeline:
         return text
 
     # -- lifecycle ---------------------------------------------------------
+    def reset_backend(self) -> None:
+        """Drop the warm session and re-warm it in the background.
+
+        Every reset - a game switch, the tray's "New context", `gamehail ctl reset` -
+        should go through here rather than calling backend.reset() directly, so the
+        next real question does not pay the cold-start ToolSearch cost that a bare
+        reset would otherwise hand it.
+        """
+        self.backend.reset()
+        threading.Thread(target=self.warmup_backend, name="backend-rewarm",
+                         daemon=True).start()
+
     def warmup_backend(self) -> None:
         """Pay the first-turn cost once at startup instead of on the pilot's first real
         question. Claude Code defers loading MCP tool schemas until searched for -

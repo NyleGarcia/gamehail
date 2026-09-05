@@ -105,7 +105,7 @@ class Tray(QtCore.QObject):
 
     def _on_reset(self) -> None:
         if self.pipeline:
-            self.pipeline.backend.reset()
+            self.pipeline.reset_backend()
             self.set_status("new context")
 
     def open_settings(self) -> None:

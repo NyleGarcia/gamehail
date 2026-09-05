@@ -34,8 +34,13 @@ class BackendConfig:
     effort: str | None = "low"
     add_dirs: list[Path] = field(default_factory=list)
     timeout_s: float = 120.0
-    # Restart the persistent session after this many turns to bound context growth.
-    max_turns: int = 40
+    # Restart the persistent session after this many turns. Bounds context growth, but
+    # also matters for behaviour: a long-lived session's own prior turns bleed into
+    # later ones (a run of "nothing found" answers made the model give up faster on the
+    # next question, even with an explicit instruction not to - confirmed by resetting
+    # mid-session and getting the right answer immediately after). Kept low now that a
+    # reset's cost is mostly hidden - see Pipeline.reset_backend().
+    max_turns: int = 15
 
 
 @dataclass

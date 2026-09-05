@@ -75,7 +75,7 @@ class ControlServer:
                 return {"ok": True}
 
             if cmd == "reset":
-                pipe.backend.reset()
+                pipe.reset_backend()
                 return {"ok": True}
 
             if cmd == "mute":

@@ -45,6 +45,9 @@ class StubPipeline:
         self.asked.append((text, images, channels))
         return "answer"
 
+    def reset_backend(self):
+        self.backend.reset()
+
     def route_for(self, action):
         return {"ask_broadcast": ["me", "squad"]}.get(action, ["me"])
 
