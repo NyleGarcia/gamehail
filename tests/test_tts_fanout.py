@@ -62,3 +62,23 @@ def test_channels_play_at_the_same_time_not_one_after_the_other(speaker):
     # Each fake player sleeps 0.6s. Concurrently that is ~0.6s total; sequentially it
     # would be ~1.2s. Half a second of headroom keeps this from being flaky.
     assert elapsed < 1.1, f"channels appear to be served sequentially ({elapsed:.2f}s)"
+
+
+def test_limiter_pulls_peaks_down_but_never_up(tmp_path):
+    """A full-scale sentence must come back at the ceiling; a quiet one untouched."""
+    import numpy as np
+
+    from gamepilot.config import TtsConfig
+    from gamepilot.tts import Speaker
+
+    speaker = Speaker(TtsConfig(peak=0.5))
+
+    loud = (np.array([32767, -32768, 16000, 0], dtype=np.int16)).tobytes()
+    limited = np.frombuffer(speaker._limit(loud), dtype=np.int16)
+    assert abs(limited).max() / 32768 == pytest.approx(0.5, abs=0.01)
+
+    quiet = (np.array([3000, -2000, 100], dtype=np.int16)).tobytes()
+    assert speaker._limit(quiet) == quiet, "quiet audio must not be amplified"
+
+    speaker.cfg.peak = 1.0
+    assert speaker._limit(loud) == loud, "a ceiling of 1.0 must be a no-op"

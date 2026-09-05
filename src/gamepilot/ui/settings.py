@@ -253,6 +253,16 @@ class SettingsWindow(QtWidgets.QWidget):
         speed_row.addWidget(self.speed, 1)
         speed_row.addWidget(self.speed_label)
         form.addRow("Pace (lower is faster)", self._wrap(speed_row))
+
+        self.peak = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal)
+        self.peak.setRange(10, 100)
+        self.peak.setValue(int(self.cfg.tts.peak * 100))
+        self.peak_label = QtWidgets.QLabel(f"{self.peak.value()}%")
+        self.peak.valueChanged.connect(lambda v: self.peak_label.setText(f"{v}%"))
+        peak_row = QtWidgets.QHBoxLayout()
+        peak_row.addWidget(self.peak, 1)
+        peak_row.addWidget(self.peak_label)
+        form.addRow("Loudness ceiling", self._wrap(peak_row))
         return box
 
     def _fill_default_voice(self) -> None:
@@ -422,6 +432,7 @@ class SettingsWindow(QtWidgets.QWidget):
                 "routes": routes,
                 "voice_model": self.voice.currentData() or "",
                 "length_scale": round(self.speed.value() / 100, 2),
+                "peak": round(self.peak.value() / 100, 2),
             },
             "backend": {
                 "mode": self.mode.currentText(),
@@ -449,6 +460,7 @@ class SettingsWindow(QtWidgets.QWidget):
         chosen = self.voice.currentData()
         self.cfg.tts.voice_model = _Path(chosen) if chosen else None
         self.cfg.tts.length_scale = round(self.speed.value() / 100, 2)
+        self.cfg.tts.peak = round(self.peak.value() / 100, 2)
         self.cfg.tts.routes = routes
         self.cfg.tts.enabled = self.tts_enabled.isChecked()
         self.cfg.stt.input_device = self.mic.currentData() or ""

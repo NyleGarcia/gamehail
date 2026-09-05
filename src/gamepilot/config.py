@@ -110,6 +110,9 @@ class TtsConfig:
     speaker: int | None = None
     length_scale: float | None = None
     player: str = "pw-play"  # "pw-play" (routable) or "aplay" (default sink only)
+    # Ceiling applied to every sentence before playback. piper renders at full scale,
+    # which clips against game audio already in the mix.
+    peak: float = 0.5
     channels: list[TtsChannel] = field(default_factory=_default_channels)
     routes: dict[str, list[str]] = field(default_factory=_default_routes)
 

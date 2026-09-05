@@ -40,6 +40,8 @@ max_seconds = 30
 enabled = true
 voice_model = "~/.local/share/gamepilot/voices/en_US-amy-medium.onnx"
 player = "pw-play"                     # "pw-play" routes per channel; "aplay" cannot
+peak = 0.5                             # ceiling per sentence; piper renders at full
+                                       # scale and clips against game audio in the mix
 
 # Audio channels. `target` is a PipeWire sink ("default" = whatever you listen on);
 # `app_name` is the application.name the stream carries, which is what OpenWave binds
@@ -60,7 +62,10 @@ target = "openwave_chat_mix"           # Discord captures Monitor of OpenWave Ch
 app_name = "gamepilot-squad"
 volume = 0.9
 enabled = true
-# voice_model = "~/.local/share/gamepilot/voices/en_US-ryan-high.onnx"  # different voice
+# A different voice on the broadcast channel, so the squad can tell the assistant apart
+# from you. `gamepilot channels` lists what is installed; the settings window downloads
+# more.
+voice_model = "~/.local/share/gamepilot/voices/en_GB-alan-medium.onnx"
 
 # Which channels each hotkey speaks on.
 [tts.routes]

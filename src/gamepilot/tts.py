@@ -22,6 +22,8 @@ import threading
 from pathlib import Path
 from queue import Empty, Queue
 
+import numpy as np
+
 from .config import TtsChannel, TtsConfig
 
 log = logging.getLogger(__name__)
@@ -158,6 +160,26 @@ class Speaker:
             cmd += ["--target", ch.target]
         return cmd + ["-"]
 
+    def _limit(self, pcm: bytes) -> bytes:
+        """Pull the peak down to the configured ceiling, never up.
+
+        piper renders at full scale - the raw stream measured 1.000 peak with a clipped
+        sample in it - and that lands in a mix that is already carrying game audio, so
+        the sum clips and the answer sounds torn. Attenuating (never amplifying) keeps
+        quiet sentences quiet instead of pumping the level between them.
+        """
+        ceiling = self.cfg.peak
+        if not ceiling or ceiling >= 1.0:
+            return pcm
+        samples = np.frombuffer(pcm, dtype=np.int16)
+        if samples.size == 0:
+            return pcm
+        peak = float(np.abs(samples).max()) / 32768.0
+        if peak <= ceiling:
+            return pcm
+        scaled = (samples.astype(np.float32) * (ceiling / peak)).astype(np.int16)
+        return scaled.tobytes()
+
     @staticmethod
     def _feed(proc: subprocess.Popen, pcm: bytes) -> None:
         try:
@@ -190,6 +212,7 @@ class Speaker:
                 continue
             if not pcm:
                 continue
+            pcm = self._limit(pcm)
             rate = voice_samplerate(voice)
             players: list[subprocess.Popen] = []
             for ch in chans:
