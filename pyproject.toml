@@ -27,3 +27,8 @@ packages = ["src/gamepilot"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]

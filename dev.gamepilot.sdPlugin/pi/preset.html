@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>gamepilot — Preset Question</title>
+<link rel="stylesheet" href="_shared.css" />
+<script src="_shared.js"></script>
+</head>
+<body>
+  <label for="text">Question</label>
+  <textarea id="text" placeholder="best sell price for laranite right now"></textarea>
+  <label for="route" style="margin-top:10px">Answer goes to</label>
+  <select id="route">
+    <option value="ask_voice">Me only</option>
+    <option value="ask_broadcast">Me and the squad</option>
+  </select>
+  <p class="hint">
+    No microphone involved — the key sends this text straight to the assistant. Good for
+    the question you ask every session.
+  </p>
+  <p class="warn" id="warn" hidden>gamepilot is not running — start it with
+    <code>gamepilot run</code>.</p>
+<script>
+const text = document.getElementById("text");
+const route = document.getElementById("route");
+const warn = document.getElementById("warn");
+text.addEventListener("change", () => GP.save({ text: text.value }));
+route.addEventListener("change", () => GP.save({ route: route.value }));
+GP.onReady((settings, state) => {
+  text.value = settings.text || "";
+  route.value = settings.route || "ask_voice";
+  if (state) warn.hidden = state.running !== false;
+});
+</script>
+</body>
+</html>

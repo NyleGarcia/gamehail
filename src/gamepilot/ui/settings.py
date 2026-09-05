@@ -9,10 +9,12 @@ from __future__ import annotations
 
 import logging
 import subprocess
+import threading
 
 from PyQt6 import QtCore, QtWidgets
 
 from .. import config as cfgmod
+from .. import voices as voicelib
 from ..capture.audio import input_devices
 from ..config import Config, TtsChannel
 
@@ -35,7 +37,8 @@ def pipewire_sinks() -> list[str]:
 class ChannelRow(QtWidgets.QWidget):
     """One output channel: where it goes, how loud, and a button to prove it works."""
 
-    def __init__(self, channel: TtsChannel, sinks: list[str], on_test, parent=None):
+    def __init__(self, channel: TtsChannel, sinks: list[str], on_test,
+                 installed: list | None = None, parent=None):
         super().__init__(parent)
         self.channel = channel
         self._on_test = on_test
@@ -67,26 +70,49 @@ class ChannelRow(QtWidgets.QWidget):
             "OpenWave binds an app source row to this name."
         )
 
+        self.voice = QtWidgets.QComboBox()
+        self.voice.addItem("default voice", "")
+        for path in installed or []:
+            self.voice.addItem(path.stem, str(path))
+        if channel.voice_model:
+            index = self.voice.findData(str(channel.voice_model))
+            if index < 0:
+                self.voice.addItem(channel.voice_model.stem, str(channel.voice_model))
+                index = self.voice.count() - 1
+            self.voice.setCurrentIndex(index)
+        self.voice.setMinimumWidth(170)
+        self.voice.setToolTip("Give the broadcast channel a different voice and the "
+                              "squad can tell it apart from you.")
+
         test = QtWidgets.QPushButton("Test")
         test.clicked.connect(lambda: self._on_test(self.values()))
 
         row = QtWidgets.QHBoxLayout(self)
         row.setContentsMargins(0, 0, 0, 0)
         for widget in (self.enabled, self.target, self.volume, self.vol_label,
-                       self.app_name, test):
+                       self.app_name, self.voice, test):
             row.addWidget(widget)
         row.addStretch(1)
 
     def values(self) -> dict:
+        chosen = self.voice.currentData() or ""
         return {
             "name": self.channel.name,
             "target": self.target.currentText().strip() or "default",
             "app_name": self.app_name.text().strip() or "gamepilot",
             "volume": round(self.volume.value() / 100, 2),
             "enabled": self.enabled.isChecked(),
-            **({"voice_model": str(self.channel.voice_model)}
-               if self.channel.voice_model else {}),
+            **({"voice_model": chosen} if chosen else {}),
         }
+
+    def refresh_voices(self, installed: list) -> None:
+        current = self.voice.currentData()
+        self.voice.clear()
+        self.voice.addItem("default voice", "")
+        for path in installed:
+            self.voice.addItem(path.stem, str(path))
+        index = self.voice.findData(current)
+        self.voice.setCurrentIndex(max(index, 0))
 
 
 class SettingsWindow(QtWidgets.QWidget):
@@ -149,12 +175,13 @@ class SettingsWindow(QtWidgets.QWidget):
         chan_layout = QtWidgets.QVBoxLayout(chan_box)
         header = QtWidgets.QLabel(
             "on   channel / PipeWire sink                       volume        "
-            "application.name"
+            "application.name        voice"
         )
         header.setStyleSheet("color: #8a94a6;")
         chan_layout.addWidget(header)
         sinks = pipewire_sinks()
-        self.channel_rows = [ChannelRow(ch, sinks, self._test_channel)
+        self._installed = voicelib.installed()
+        self.channel_rows = [ChannelRow(ch, sinks, self._test_channel, self._installed)
                              for ch in self.cfg.tts.channels]
         for row in self.channel_rows:
             chan_layout.addWidget(row)
@@ -192,11 +219,70 @@ class SettingsWindow(QtWidgets.QWidget):
         route_grid.setColumnStretch(len(self.cfg.tts.channels) + 1, 1)
         layout.addWidget(route_box)
 
+        layout.addWidget(self._voice_box())
+
         self.tts_enabled = QtWidgets.QCheckBox("Speak answers")
         self.tts_enabled.setChecked(self.cfg.tts.enabled)
         layout.addWidget(self.tts_enabled)
         layout.addStretch(1)
         return page
+
+    def _voice_box(self) -> QtWidgets.QGroupBox:
+        box = QtWidgets.QGroupBox("Voice")
+        form = QtWidgets.QFormLayout(box)
+
+        self.voice = QtWidgets.QComboBox()
+        self._fill_default_voice()
+        row = QtWidgets.QHBoxLayout()
+        row.addWidget(self.voice, 1)
+        get_more = QtWidgets.QPushButton("Get more voices…")
+        get_more.clicked.connect(self._open_voice_downloader)
+        preview = QtWidgets.QPushButton("Preview")
+        preview.clicked.connect(self._preview_voice)
+        row.addWidget(preview)
+        row.addWidget(get_more)
+        form.addRow("Default voice", self._wrap(row))
+
+        self.speed = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal)
+        self.speed.setRange(70, 160)  # length_scale 0.7 (fast) .. 1.6 (slow), inverted
+        self.speed.setValue(int((self.cfg.tts.length_scale or 1.0) * 100))
+        self.speed_label = QtWidgets.QLabel(f"{self.speed.value() / 100:.2f}×")
+        self.speed.valueChanged.connect(
+            lambda v: self.speed_label.setText(f"{v / 100:.2f}×"))
+        speed_row = QtWidgets.QHBoxLayout()
+        speed_row.addWidget(self.speed, 1)
+        speed_row.addWidget(self.speed_label)
+        form.addRow("Pace (lower is faster)", self._wrap(speed_row))
+        return box
+
+    def _fill_default_voice(self) -> None:
+        current = self.voice.currentData() if self.voice.count() else (
+            str(self.cfg.tts.voice_model) if self.cfg.tts.voice_model else "")
+        self.voice.clear()
+        for path in self._installed:
+            self.voice.addItem(path.stem, str(path))
+        if not self._installed:
+            self.voice.addItem("no voices installed", "")
+        index = self.voice.findData(current)
+        self.voice.setCurrentIndex(max(index, 0))
+
+    def _preview_voice(self) -> None:
+        chosen = self.voice.currentData()
+        if not chosen:
+            self.status.setText("no voice installed — use Get more voices…")
+            return
+        self._test_channel({
+            "name": "preview", "target": "default", "app_name": "gamepilot",
+            "volume": 1.0, "voice_model": chosen,
+        })
+
+    def _open_voice_downloader(self) -> None:
+        dialog = VoiceDownloader(self)
+        dialog.exec()
+        self._installed = voicelib.installed()
+        self._fill_default_voice()
+        for row in self.channel_rows:
+            row.refresh_voices(self._installed)
 
     def _assistant_tab(self) -> QtWidgets.QWidget:
         page = QtWidgets.QWidget()
@@ -321,6 +407,8 @@ class SettingsWindow(QtWidgets.QWidget):
                 "enabled": self.tts_enabled.isChecked(),
                 "channels": channels,
                 "routes": routes,
+                "voice_model": self.voice.currentData() or "",
+                "length_scale": round(self.speed.value() / 100, 2),
             },
             "backend": {
                 "mode": self.mode.currentText(),
@@ -336,11 +424,17 @@ class SettingsWindow(QtWidgets.QWidget):
 
     def _apply_live(self, channels: list[dict], routes: dict[str, list[str]]) -> None:
         """Push what can change without a restart into the running pipeline."""
+        from pathlib import Path as _Path
+
         self.cfg.tts.channels = [
-            TtsChannel(**{**ch, "voice_model": self.cfg.tts.channels[i].voice_model})
-            if i < len(self.cfg.tts.channels) else TtsChannel(**ch)
-            for i, ch in enumerate(channels)
+            TtsChannel(**{**ch,
+                          "voice_model": _Path(ch["voice_model"])
+                          if ch.get("voice_model") else None})
+            for ch in channels
         ]
+        chosen = self.voice.currentData()
+        self.cfg.tts.voice_model = _Path(chosen) if chosen else None
+        self.cfg.tts.length_scale = round(self.speed.value() / 100, 2)
         self.cfg.tts.routes = routes
         self.cfg.tts.enabled = self.tts_enabled.isChecked()
         self.cfg.stt.input_device = self.mic.currentData() or ""
@@ -350,3 +444,92 @@ class SettingsWindow(QtWidgets.QWidget):
         self.cfg.backend.effort = self.effort.currentText()
         if self.pipeline:
             self.pipeline.recorder.device = self.cfg.stt.input_device or None
+
+
+class VoiceDownloader(QtWidgets.QDialog):
+    """Browse piper's published voices and fetch one.
+
+    The catalogue is piper's own `voices.json`, so the list is what actually exists
+    rather than a hardcoded guess. Downloads run on a worker thread; the dialog polls
+    for progress so no Qt object is touched off the main thread.
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Get voices")
+        self.resize(460, 180)
+        self._progress = (0.0, "")
+        self._error: str | None = None
+        self._worker: threading.Thread | None = None
+
+        self.language = QtWidgets.QComboBox()
+        self.language.addItems(["en", "de", "fr", "es", "it", "nl", "pl", "pt", "ru"])
+        self.language.currentTextChanged.connect(self._fill)
+
+        self.voices = QtWidgets.QComboBox()
+        self.bar = QtWidgets.QProgressBar()
+        self.bar.setRange(0, 100)
+        self.label = QtWidgets.QLabel("")
+
+        self.get = QtWidgets.QPushButton("Download")
+        self.get.clicked.connect(self._download)
+        close = QtWidgets.QPushButton("Close")
+        close.clicked.connect(self.accept)
+
+        form = QtWidgets.QFormLayout()
+        form.addRow("Language", self.language)
+        form.addRow("Voice", self.voices)
+        buttons = QtWidgets.QHBoxLayout()
+        buttons.addWidget(self.label, 1)
+        buttons.addWidget(self.get)
+        buttons.addWidget(close)
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.addLayout(form)
+        layout.addWidget(self.bar)
+        layout.addLayout(buttons)
+
+        self._timer = QtCore.QTimer(self)
+        self._timer.timeout.connect(self._tick)
+        self._timer.start(100)
+        self._fill("en")
+
+    def _fill(self, language: str) -> None:
+        self.voices.clear()
+        keys = voicelib.available(language)
+        if not keys:
+            self.label.setText("catalogue unavailable — check the network")
+            return
+        installed = {p.stem for p in voicelib.installed()}
+        for key in keys:
+            self.voices.addItem(f"{key}{'  (installed)' if key in installed else ''}", key)
+
+    def _download(self) -> None:
+        key = self.voices.currentData()
+        if not key or (self._worker and self._worker.is_alive()):
+            return
+        self.get.setEnabled(False)
+        self._error = None
+
+        def run():
+            try:
+                voicelib.download(key, progress=lambda f, m: setattr(self, "_progress", (f, m)))
+            except Exception as exc:  # noqa: BLE001 - reported in the dialog
+                self._error = str(exc)
+
+        self._worker = threading.Thread(target=run, name="voice-download", daemon=True)
+        self._worker.start()
+
+    def _tick(self) -> None:
+        fraction, message = self._progress
+        self.bar.setValue(int(fraction * 100))
+        if self._error:
+            self.label.setText(f"failed: {self._error}")
+            self.get.setEnabled(True)
+            self._error = None
+            return
+        if message:
+            self.label.setText(message)
+        if self._worker and not self._worker.is_alive():
+            self.get.setEnabled(True)
+            self._worker = None
+            self._fill(self.language.currentText())

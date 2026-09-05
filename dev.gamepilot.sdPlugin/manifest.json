@@ -1,0 +1,65 @@
+{
+  "Name": "gamepilot",
+  "Description": "Ask your game assistant from a deck key: hold to talk, fire a preset question, or send the answer out over voice comms.",
+  "Author": "Zedwil",
+  "Version": "0.1.0",
+  "Icon": "icons/plugin",
+  "Category": "gamepilot",
+  "SDKVersion": 2,
+  "CodePath": "run.sh",
+  "CodePathLin": "run.sh",
+  "Software": { "MinimumVersion": "6.0" },
+  "OS": [ { "Platform": "linux", "MinimumVersion": "0" } ],
+  "Actions": [
+    {
+      "Name": "Hold to Ask",
+      "UUID": "dev.gamepilot.ask",
+      "Icon": "icons/ask",
+      "Tooltip": "Hold the key and speak. Release to send the question. Pick in settings whether the answer stays private, includes a screenshot, or goes out to the squad.",
+      "Controllers": ["Keypad"],
+      "SupportedInMultiActions": false,
+      "States": [ { "Image": "icons/ask", "TitleAlignment": "bottom" } ],
+      "PropertyInspectorPath": "pi/ask.html"
+    },
+    {
+      "Name": "Preset Question",
+      "UUID": "dev.gamepilot.preset",
+      "Icon": "icons/preset",
+      "Tooltip": "Send a question you typed in settings - no microphone involved.",
+      "Controllers": ["Keypad"],
+      "SupportedInMultiActions": true,
+      "States": [ { "Image": "icons/preset", "TitleAlignment": "bottom" } ],
+      "PropertyInspectorPath": "pi/preset.html"
+    },
+    {
+      "Name": "Mute Speech",
+      "UUID": "dev.gamepilot.mute",
+      "Icon": "icons/mute",
+      "Tooltip": "Stop gamepilot speaking, and start it again.",
+      "Controllers": ["Keypad"],
+      "SupportedInMultiActions": true,
+      "States": [
+        { "Image": "icons/speaking", "Title": "" },
+        { "Image": "icons/mute", "Title": "" }
+      ]
+    },
+    {
+      "Name": "Cancel",
+      "UUID": "dev.gamepilot.cancel",
+      "Icon": "icons/cancel",
+      "Tooltip": "Cut the current answer short and hide the overlay.",
+      "Controllers": ["Keypad"],
+      "SupportedInMultiActions": true,
+      "States": [ { "Image": "icons/cancel", "Title": "" } ]
+    },
+    {
+      "Name": "Status",
+      "UUID": "dev.gamepilot.status",
+      "Icon": "icons/status",
+      "Tooltip": "Shows what gamepilot is doing, and whether it is running at all.",
+      "Controllers": ["Keypad"],
+      "SupportedInMultiActions": false,
+      "States": [ { "Image": "icons/status", "TitleAlignment": "middle" } ]
+    }
+  ]
+}

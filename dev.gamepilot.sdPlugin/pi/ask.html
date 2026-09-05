@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>gamepilot — Hold to Ask</title>
+<link rel="stylesheet" href="_shared.css" />
+<script src="_shared.js"></script>
+</head>
+<body>
+  <label for="route">When I release the key</label>
+  <select id="route">
+    <option value="ask_voice">Answer me only</option>
+    <option value="ask_screen">Answer me, with a screenshot of the game</option>
+    <option value="ask_broadcast">Answer me and the squad</option>
+  </select>
+  <p class="hint">
+    Hold the key and speak; release to send. The screenshot is taken the moment you
+    press, so it is the frame you were looking at when you asked.
+  </p>
+  <p class="warn" id="warn" hidden>gamepilot is not running — start it with
+    <code>gamepilot run</code>.</p>
+<script>
+const route = document.getElementById("route");
+const warn = document.getElementById("warn");
+route.addEventListener("change", () => GP.save({ route: route.value }));
+GP.onReady((settings, state) => {
+  route.value = settings.route || "ask_voice";
+  if (state) warn.hidden = state.running !== false;
+});
+</script>
+</body>
+</html>

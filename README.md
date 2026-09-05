@@ -8,9 +8,10 @@ No API key, no per-token bill: it drives the `claude` CLI, so it runs on your ex
 Claude Code subscription.
 
 ```
-  hold KEY_F13 ──► mic ──► whisper ──► claude -p (+ game MCP) ──┬─► piper ──► "me"    (your headset)
-  hold KEY_F14 ──► + screenshot ──┘                             ├─► piper ──► "squad" (OpenWave Chat Mix ──► Discord)
-  hold KEY_F16 ──► answer goes to both                          └─► Qt overlay
+  hold a key ──┐
+  hold a deck ─┼─► mic ──► whisper ──► claude -p (+ game MCP) ──┬─► piper ──► "me"    (your headset)
+  key or HOTAS │      + screenshot ──┘                          ├─► piper ──► "squad" (OpenWave Chat Mix ──► Discord)
+  gamepilot ctl┘                                                └─► Qt overlay + tray
 ```
 
 ## Two backend modes
@@ -102,9 +103,31 @@ and what Whisper heard), configures each **output channel** (sink, volume,
 `application.name`, per-channel test button), and holds the **route grid** deciding
 which hotkey speaks on which channel.
 
+It also picks the **voice** — per channel, with a preview button, and a browser that
+downloads any voice from piper's published catalogue.
+
 It writes to `config.local.toml`, which layers on top of `config.toml` — so the UI never
 rewrites the file you hand-edited, comments included. Details in
 [docs/ui.md](docs/ui.md).
+
+## Stream Deck / OpenDeck
+
+`make deck-install` installs `dev.gamepilot.sdPlugin`. Five actions: **Hold to Ask**
+(keyDown records, keyUp sends — with a per-key route: private, with-screenshot, or to
+the squad), **Preset Question** (text typed in the inspector, no mic), **Mute Speech**,
+**Cancel**, and **Status**. A deck key needs no `input` group and cannot clash with a
+game binding, which makes it the easiest trigger to live with.
+
+It drives the daemon's control socket, and so can anything else:
+
+```bash
+gamepilot ctl press ask_voice        # a macro system can hold-to-talk too
+gamepilot ctl release ask_voice
+gamepilot ctl ask --route ask_broadcast "eta to microtech"
+gamepilot ctl status --json
+```
+
+Details in [docs/deck.md](docs/deck.md).
 
 ## Constraints
 
@@ -129,6 +152,9 @@ src/gamepilot/
   ui/tray.py               tray icon, status colour, quick actions
   ui/settings.py           mic picker, channel routing, backend options
   ui/app.py                Qt entry point and the single event dispatcher
+  ipc.py                   control socket (deck keys, `gamepilot ctl`, macros)
+  voices.py                installed voices, piper's catalogue, downloads
+dev.gamepilot.sdPlugin/    OpenDeck / Stream Deck plugin
   hotkeys.py               evdev listener
   pipeline.py              wires it together
 ```

@@ -13,6 +13,7 @@ from .capture.audio import Recorder
 from .capture.screen import Screenshotter
 from .config import Config
 from .hotkeys import HotkeyListener
+from .ipc import ControlServer
 from .stt import Transcriber
 from .tts import Speaker
 
@@ -28,18 +29,49 @@ class Pipeline:
         self.transcriber = Transcriber(cfg.stt)
         self.speaker = Speaker(cfg.tts)
         self.shots = Screenshotter(cfg.screen, cfg.work_dir)
-        self.hotkeys = HotkeyListener(cfg.hotkeys, self._on_key)
+        self.hotkeys = HotkeyListener(cfg.hotkeys, self.trigger)
+        self.control = ControlServer(self)
 
         self._busy = threading.Lock()
         self._press_at: dict[str, float] = {}
         self._pending_shot: Path | None = None
+        self.state = "idle"
+        self.last_question = ""
+        self.last_answer = ""
 
     # -- ui helpers --------------------------------------------------------
     def _emit(self, kind: str, payload: str = "") -> None:
+        if kind == "status":
+            self.state = payload
+        elif kind == "answer" and payload:
+            self.state = "idle"
+        elif kind == "hide":
+            self.state = "idle"
         self.events.put((kind, payload))
 
-    # -- hotkey handling ---------------------------------------------------
-    def _on_key(self, action: str, pressed: bool) -> None:
+    def status(self) -> dict:
+        """Everything a control surface needs to label its keys."""
+        return {
+            "state": self.state,
+            "busy": self._busy.locked(),
+            "recording": self.recorder.active,
+            "muted": not self.cfg.tts.enabled,
+            "profile": self.cfg.profile,
+            "backend": self.cfg.backend.mode,
+            "model": self.cfg.backend.model,
+            "question": self.last_question,
+            "answer": self.last_answer,
+            "channels": [c.name for c in self.cfg.tts.channels if c.enabled],
+            "routes": self.cfg.tts.routes,
+        }
+
+    # -- triggers (hotkeys, control socket, deck keys) ----------------------
+    def trigger(self, action: str, pressed: bool) -> None:
+        """Start or finish a request. `pressed` is key-down; releasing runs the query.
+
+        Both the evdev listener and the control socket land here, so a Stream Deck key
+        behaves exactly like a held hotkey.
+        """
         now = time.monotonic()
         if action == "cancel":
             if pressed:
@@ -96,6 +128,7 @@ class Pipeline:
                 return
 
             log.info("Q: %s", question)
+            self.last_question = question
             route = self.route_for(action)
             self._emit("status", f"» {question}")
             self.ask(question, [shot] if shot else None, channels=route)
@@ -123,6 +156,7 @@ class Pipeline:
             if chunk.final:
                 self.speaker.flush()
         text = "".join(answer).strip()
+        self.last_answer = text
         log.info("A (%.1fs, -> %s): %s", time.monotonic() - started, ",".join(route), text)
         if not text:
             self._emit("answer", "no answer")
@@ -131,8 +165,13 @@ class Pipeline:
     # -- lifecycle ---------------------------------------------------------
     def start(self) -> None:
         self.hotkeys.start()
+        try:
+            self.control.start()
+        except (OSError, RuntimeError) as exc:
+            log.error("control socket unavailable: %s", exc)
 
     def close(self) -> None:
+        self.control.close()
         self.hotkeys.stop()
         self.speaker.close()
         self.backend.close()

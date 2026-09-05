@@ -147,6 +147,34 @@ def cmd_say(args) -> int:
     return 0
 
 
+def cmd_ctl(args) -> int:
+    """Drive a running daemon over its control socket."""
+    import json as _json
+
+    from . import ipc
+
+    msg: dict = {"cmd": args.command}
+    if args.command in ("press", "release"):
+        msg["action"] = args.arg[0] if args.arg else "ask_voice"
+    elif args.command == "ask":
+        msg["text"] = " ".join(args.arg)
+        if args.route:
+            msg["route"] = args.route
+        if args.channel:
+            msg["channels"] = args.channel
+    elif args.command == "mute":
+        msg["on"] = not (args.arg and args.arg[0] in ("off", "false", "0"))
+
+    try:
+        reply = ipc.send(msg, Path(args.socket) if args.socket else None)
+    except (OSError, ConnectionError) as exc:
+        print(f"no running gamepilot on the control socket: {exc}", file=sys.stderr)
+        return 1
+    print(_json.dumps(reply, indent=2) if args.json else
+          reply.get("error") or reply.get("state") or "ok")
+    return 0 if reply.get("ok") else 1
+
+
 def cmd_settings(args) -> int:
     """Open the settings window without starting the daemon."""
     from .ui.app import run_settings
@@ -227,6 +255,17 @@ def main(argv: list[str] | None = None) -> int:
     p_say.add_argument("text", nargs="+")
     p_say.add_argument("--channel", action="append", help="channel name (repeatable)")
     p_say.set_defaults(func=cmd_say)
+
+    p_ctl = sub.add_parser("ctl", help="drive a running daemon (for decks and scripts)")
+    p_ctl.add_argument("command",
+                       choices=["press", "release", "ask", "cancel", "reset", "mute",
+                                "status"])
+    p_ctl.add_argument("arg", nargs="*", help="action name, question text, or on/off")
+    p_ctl.add_argument("--route", help="route name for `ask` (default ask_voice)")
+    p_ctl.add_argument("--channel", action="append", help="explicit channel (repeatable)")
+    p_ctl.add_argument("--socket", help="control socket path")
+    p_ctl.add_argument("--json", action="store_true", help="print the raw reply")
+    p_ctl.set_defaults(func=cmd_ctl)
 
     p_set = sub.add_parser("settings", help="open the settings window")
     _common(p_set)

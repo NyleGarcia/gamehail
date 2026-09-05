@@ -1,0 +1,13 @@
+:root { color-scheme: dark; }
+body {
+  font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #e9eef5; background: #1b1f26; margin: 0; padding: 14px;
+}
+label { display: block; margin-bottom: 4px; color: #b6c0cf; font-weight: 600; }
+select, input[type=text], textarea {
+  width: 100%; box-sizing: border-box; padding: 6px 8px; border-radius: 6px;
+  border: 1px solid #38414f; background: #10141a; color: #e9eef5; font: inherit;
+}
+textarea { min-height: 66px; resize: vertical; }
+.hint { color: #8a94a6; margin: 10px 0 0; }
+.warn { color: #ffb4a2; margin: 10px 0 0; }

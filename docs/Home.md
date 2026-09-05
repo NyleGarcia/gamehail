@@ -10,4 +10,5 @@ updated: 2026-09-05
 - [[backend-modes]] — oneshot vs persistent Claude CLI drivers ([backend-modes](backend-modes.md))
 - [[audio-channels]] — private vs squad answer routing through OpenWave ([audio-channels](audio-channels.md))
 - [[ui]] — tray icon and settings window ([ui](ui.md))
+- [[deck]] — Stream Deck / OpenDeck plugin and the control socket ([deck](deck.md))
 - [[plans/now/todo]] — active work ([todo](plans/now/todo.md))

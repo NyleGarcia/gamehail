@@ -58,4 +58,13 @@ makes per-stream routing possible; `player = "aplay"` still works but can only r
 the default sink. A channel may set its own `voice_model`, which is a cheap way to make
 the broadcast voice recognisably different from your private one.
 
-See [[architecture]] for where speech sits in the pipeline.
+## Choosing the voice
+
+`tts.voice_model` is the default voice and any channel may override it, which is the
+cheap way to make the squad's copy audibly not you. The settings window lists what is
+installed, previews a voice before you commit to it, and **Get more voices…** browses
+piper's published catalogue (its own `voices.json`, so the list is what actually exists)
+and downloads on a worker thread. `tts.length_scale` is the pace — below 1.0 is faster.
+
+See [[architecture]] for where speech sits in the pipeline, and [[deck]] for triggering
+an answer from a deck key.
