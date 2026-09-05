@@ -31,7 +31,7 @@ min_hold_ms = 150
 
 [stt]
 input_device = ""                      # PortAudio name; empty = system default
-model = "small.en"                     # tiny.en | base.en | small.en | medium.en
+model = "small.en"                     # tiny.en | base.en | small.en | medium.en                     # tiny.en | base.en | small.en | medium.en
 device = "auto"                        # auto -> try CUDA, fall back to CPU
 language = "en"
 max_seconds = 30
@@ -83,6 +83,19 @@ font_size = 15
 hide_after_s = 20
 
 # ---- per-game profiles -------------------------------------------------------
+# Words Whisper has never met. Without these it hears "lara night" for laranite.
+[profiles.star-citizen.stt]
+vocabulary = [
+  "Star Citizen", "aUEC", "SCU", "quantum drive", "quantanium", "laranite",
+  "agricium", "titanium", "diamond", "gold", "bexalite", "hadanite", "medical supplies",
+  "Stanton", "Pyro", "Hurston", "Lorville", "ArcCorp", "Area 18", "microTech",
+  "New Babbage", "Crusader", "Orison", "Port Olisar", "Grim HEX", "Everus Harbor",
+  "Baijini Point", "Port Tressler", "Ruin Station", "Checkmate", "Orbituary",
+  "Constellation", "Andromeda", "Caterpillar", "Hercules", "Starfarer", "Prospector",
+  "MOLE", "Reclaimer", "Vulture", "Corsair", "Cutlass", "Freelancer", "Hull C",
+  "Carrack", "Polaris", "Idris", "Redeemer", "Vanguard", "Gladius", "Arrow", "Hornet",
+]
+
 [profiles.star-citizen.backend]
 system_prompt = """
 You are a live Star Citizen assistant. The player is flying and cannot read long text.

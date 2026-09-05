@@ -29,3 +29,22 @@ screenshot is taken *on key-down* — the frame the player was looking at when t
 not the one after they finished the sentence.
 
 See [[backend-modes]] for the Claude CLI wiring.
+
+
+## Speech recognition
+
+faster-whisper runs on CUDA when it can. Two things make that survivable:
+
+* **CUDA libraries are preloaded by hand.** Arch ships no system cuBLAS, and the pip
+  wheels put theirs under `site-packages/nvidia/*/lib`, which the dynamic loader does
+  not search. `stt.preload_cuda_libraries()` dlopens each one with `RTLD_GLOBAL` before
+  the model is built, which has the same effect as `LD_LIBRARY_PATH` without needing a
+  wrapper script.
+* **A missing GPU library surfaces late.** ctranslate2 builds the model happily and only
+  needs cuBLAS on the first transcription, so a broken setup fails mid-question, not at
+  startup. `Transcriber.transcribe` catches that, rebuilds on CPU int8 and answers the
+  question rather than losing it.
+
+`[stt] vocabulary` is passed as the decoder's initial prompt. Whisper has never seen
+"laranite" and lands on "lara night" without it; the star-citizen profile carries 52
+commodity, system, station and ship names.

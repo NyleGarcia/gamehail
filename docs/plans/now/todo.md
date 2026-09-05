@@ -9,6 +9,7 @@ updated: 2026-09-05
 Verified on this machine: faster-whisper `small.en` runs on CUDA/float16 (RTX 5080), 8.9s cold load.
 
 - [ ] Place the deck keys in OpenDeck and set each one's route
+- [ ] Extend `[stt] vocabulary` as new commodities and ships come up in real questions
 - [ ] Confirm the KWin rule keeps the overlay above Star Citizen in borderless mode
 - [ ] Decide whether `me` should target `openwave_personal_mix` explicitly rather than the default sink
 - [ ] Add the gamepilot / gamepilot-squad app sources in OpenWave to get per-mix levels

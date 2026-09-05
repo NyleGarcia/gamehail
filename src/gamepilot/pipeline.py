@@ -124,7 +124,16 @@ class Pipeline:
                 self._emit("answer", f"transcription failed: {exc}")
                 return
             if not question:
-                self._emit("answer", "heard nothing")
+                # Distinguish "said nothing" from "recording the wrong device": a
+                # silent peak means the microphone never carried the voice at all.
+                peak = float(abs(audio).max()) if audio.size else 0.0
+                if peak < 0.01:
+                    log.warning("mic peak %.3f - check the input device in settings", peak)
+                    self._emit("answer",
+                               f"heard nothing (mic level {peak:.2f} — wrong input "
+                               "device?)")
+                else:
+                    self._emit("answer", "heard nothing")
                 return
 
             log.info("Q: %s", question)

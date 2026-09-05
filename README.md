@@ -51,7 +51,13 @@ uv run gamepilot keys                     # find evdev names for your keys
 uv run gamepilot devices                  # list input devices
 ```
 
-Autostart: `cp scripts/gamepilot.service ~/.config/systemd/user/ && systemctl --user enable --now gamepilot`.
+Autostart:
+
+```bash
+cp scripts/gamepilot.service ~/.config/systemd/user/
+systemctl --user enable --now gamepilot
+journalctl --user -u gamepilot -f      # what it heard, what it answered
+```
 
 ## Triggering
 
@@ -133,6 +139,16 @@ gamepilot ctl status --json
 ```
 
 Details in [docs/deck.md](docs/deck.md).
+
+## When it says "heard nothing"
+
+The answer path is: record → whisper → claude → speech. If a question goes nowhere,
+`journalctl --user -u gamepilot -n 30` names the step that failed. A "heard nothing"
+that also reports a mic level near zero means the wrong input device, which the settings
+window's mic test settles in three seconds.
+
+Speech recognition uses the GPU when it can (measured here: 0.64s for a 3.3s question on
+an RTX 5080) and drops to CPU on its own if the CUDA libraries are unusable.
 
 ## Constraints
 

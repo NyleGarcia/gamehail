@@ -62,6 +62,10 @@ class SttConfig:
     language: str = "en"
     samplerate: int = 16000
     max_seconds: float = 30.0
+    # Words Whisper has never met - ship names, commodities, systems. Passed as the
+    # decoder's initial prompt, which biases it towards spelling them the game's way
+    # instead of the nearest English phrase ("lara night" for laranite).
+    vocabulary: list[str] = field(default_factory=list)
 
 
 @dataclass

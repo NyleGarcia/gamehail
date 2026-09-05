@@ -12,6 +12,8 @@ dependencies = [
     "piper-tts>=1.2",
     "PyQt6>=6.7",
     "tomli-w>=1.2.0",
+    "nvidia-cublas-cu12>=12.9.2.10",
+    "nvidia-cudnn-cu12>=9.25.1.1",
 ]
 
 [project.scripts]
