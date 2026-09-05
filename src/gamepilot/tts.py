@@ -157,6 +157,15 @@ class Speaker:
             cmd += ["--target", ch.target]
         return cmd + ["-"]
 
+    @staticmethod
+    def _feed(proc: subprocess.Popen, pcm: bytes) -> None:
+        try:
+            assert proc.stdin is not None
+            proc.stdin.write(pcm)
+            proc.stdin.close()
+        except (BrokenPipeError, OSError) as exc:
+            log.warning("player write failed: %s", exc)
+
     def _say(self, text: str, route: tuple[str, ...]) -> None:
         channels = self.resolve(route)
         if not channels:
@@ -193,17 +202,24 @@ class Speaker:
                     continue
                 players.append(proc)
             self._procs = players
+            # One writer thread per player. pw-play consumes at playback rate, so
+            # writing the channels one after another leaves the second player with an
+            # idle stdin for the whole of the first playback - long enough that it
+            # exits, and the write that finally arrives dies with a broken pipe.
+            writers = [
+                threading.Thread(target=self._feed, args=(proc, pcm),
+                                 name="tts-write", daemon=True)
+                for proc in players
+            ]
+            for writer in writers:
+                writer.start()
+            for writer in writers:
+                writer.join(timeout=180)
             for proc in players:
                 try:
-                    assert proc.stdin is not None
-                    proc.stdin.write(pcm)
-                    proc.stdin.close()
-                except (BrokenPipeError, OSError) as exc:
-                    log.warning("player write failed: %s", exc)
-            for proc in players:
-                try:
-                    proc.wait(timeout=120)
+                    proc.wait(timeout=180)
                 except subprocess.TimeoutExpired:
+                    log.warning("player did not finish; killing it")
                     proc.kill()
             self._procs = []
 
