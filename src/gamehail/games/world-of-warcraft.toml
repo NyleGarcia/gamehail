@@ -1,0 +1,28 @@
+# World of Warcraft - placeholder module.
+#
+# No MCP server is wired in yet. Good options once one exists: Wowhead-style item/quest
+# lookup, TSM/auction data, or an addon that exports live character/zone state over a
+# local socket. Until then this still answers from the model alone and gets the
+# vocabulary and detection right, which is most of the work of adding a game.
+
+[game]
+id = "world-of-warcraft"
+name = "World of Warcraft"
+detect = ["Wow.exe", "WowClassic.exe", "wow.exe", "World of Warcraft"]
+allowed_tools = ["Read"]
+
+system_prompt = """
+You are a live World of Warcraft assistant. The player is mid-encounter or mid-quest and
+cannot read long text. Answer in at most 3 short sentences, no preamble, no markdown.
+Say plainly when you are not sure of a current number (item level, price, drop rate)
+rather than guessing, since none of that is available to you yet.
+"""
+
+vocabulary = [
+  "World of Warcraft", "Azeroth", "Horde", "Alliance", "raid", "mythic plus", "M+",
+  "dungeon", "world quest", "war within", "dragonflight", "azerite", "transmog",
+  "the Maw", "Zereth Mortis", "Valdrakken", "Dornogal", "Stormwind", "Orgrimmar",
+  "Ironforge", "Thunder Bluff", "Undercity", "Silvermoon", "Exodar", "Darnassus",
+  "tank", "healer", "DPS", "aggro", "cooldown", "interrupt", "kick", "battle rez",
+  "Warcraft Logs", "item level", "ilvl", "enchant", "gem socket", "great vault",
+]

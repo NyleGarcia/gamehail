@@ -15,4 +15,4 @@ Verified on this machine: faster-whisper `small.en` runs on CUDA/float16 (RTX 50
 - [ ] Add the gamehail / gamehail-squad app sources in OpenWave to get per-mix levels
 - [ ] Rebind hotkeys from the settings window instead of the config file
 - [ ] Tune the Star Citizen module's prompt against real in-flight questions
-- [ ] Write a second game module to prove the shape holds
+- [x] Write more game modules — World of Warcraft, Elite Dangerous, Minecraft, Elden Ring (placeholders, no MCP yet)

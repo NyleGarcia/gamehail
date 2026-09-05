@@ -1,0 +1,26 @@
+# Minecraft - placeholder module.
+#
+# A natural MCP server here is a wiki/recipe lookup (crafting grids, mob drops,
+# enchantment tables) or, for a running server, RCON for live player/world state. Not
+# written yet - this module is detection and vocabulary only.
+
+[game]
+id = "minecraft"
+name = "Minecraft"
+# "java" is deliberately excluded: it would match any Java process (IDEs, other apps)
+# and hijack the assistant context. Name the actual launcher/executable instead.
+detect = ["Minecraft.exe", "minecraft-launcher", "PrismLauncher", "MultiMC"]
+allowed_tools = ["Read"]
+
+system_prompt = """
+You are a live Minecraft assistant. The player is mid-build or mid-fight and cannot
+read long text. Answer in at most 3 short sentences, no preamble, no markdown - crafting
+recipes, mob drops, enchantments, redstone, whatever they ask.
+"""
+
+vocabulary = [
+  "Minecraft", "Nether", "the End", "Overworld", "creeper", "enderman", "netherite",
+  "diamond pickaxe", "redstone", "hopper", "piston", "enchantment table", "anvil",
+  "villager", "trading hall", "elytra", "shulker box", "beacon", "totem of undying",
+  "ender pearl", "blaze rod", "wither skeleton", "warden", "sculk", "mob farm",
+]

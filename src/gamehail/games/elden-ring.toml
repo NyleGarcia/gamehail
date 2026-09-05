@@ -1,0 +1,24 @@
+# Elden Ring - placeholder module.
+#
+# A boss/item/location wiki lookup MCP would do most of the useful work here (attack
+# patterns, item locations, upgrade materials). Not written yet.
+
+[game]
+id = "elden-ring"
+name = "Elden Ring"
+detect = ["eldenring.exe", "start_protected_game.exe"]
+allowed_tools = ["Read"]
+
+system_prompt = """
+You are a live Elden Ring assistant. The player is mid-fight and cannot read long text.
+Answer in at most 3 short sentences, no preamble, no markdown - boss attack patterns,
+item and weapon locations, upgrade materials, build advice.
+"""
+
+vocabulary = [
+  "Elden Ring", "the Lands Between", "Tarnished", "Erdtree", "Margit", "Malenia",
+  "Radahn", "Godrick", "Rennala", "Mohg", "Malekith", "Radagon", "Elden Beast",
+  "great rune", "flask of crimson tears", "flask of cerulean tears", "ashes of war",
+  "spirit ash", "smithing stone", "somber smithing stone", "scadutree fragment",
+  "Shadow of the Erdtree", "stake of Marika", "Torrent", "poise", "stance break",
+]

@@ -25,10 +25,13 @@ gamehail games                    # what is installed, what is running, what is 
 gamehail --game star-citizen ask "best price for laranite"
 ```
 
-**Star Citizen ships as the first module** ([SCMCP](https://github.com/) for live prices,
+**Star Citizen ships fully wired** ([SCMCP](https://github.com/) for live prices,
 terminals, trade routes and ships, plus 52 vocabulary terms so Whisper stops hearing
-"lara night"). Adding another game is adding a file in `~/.config/gamehail/games/` —
-see [docs/games.md](docs/games.md).
+"lara night"). World of Warcraft, Elite Dangerous, Minecraft and Elden Ring ship as
+placeholders — detection and vocabulary done, no MCP server wired in yet, so they
+answer from the model alone until one exists. Adding a game, or finishing one of
+these, is adding or editing a file in `~/.config/gamehail/games/` — see
+[docs/games.md](docs/games.md).
 
 ## Two backend modes
 

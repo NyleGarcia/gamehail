@@ -16,7 +16,24 @@ src/gamehail/games/*.toml        shipped with gamehail
 ~/.config/gamehail/games/*.toml  yours — wins on a matching id
 ```
 
-Star Citizen is the first module, and the shape every other one follows:
+## Installed today
+
+| module | MCP server | status |
+|---|---|---|
+| `star-citizen` | [SCMCP](https://github.com/) — live prices, terminals, trade routes, ships | wired up |
+| `world-of-warcraft` | none yet | placeholder: detection + vocabulary only |
+| `elite-dangerous` | none yet | placeholder: detection + vocabulary only |
+| `minecraft` | none yet | placeholder: detection + vocabulary only |
+| `elden-ring` | none yet | placeholder: detection + vocabulary only |
+| `generic` | none | fallback when nothing is detected |
+
+A placeholder still answers from the model alone and gets detection and vocabulary
+right, which is most of the work of adding a game — wiring in an MCP server is the part
+left undone. `elite-dangerous` in particular is a short step away: the game's own
+Journal file is line-delimited JSON, sitting under the Proton prefix's `Saved Games`,
+and reading it live for current system, dock state and cargo is enough for a first cut.
+
+Star Citizen is the first fully-wired module, and the shape every other one follows:
 
 ```toml
 [game]

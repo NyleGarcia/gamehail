@@ -1,0 +1,26 @@
+# Elite Dangerous - placeholder module.
+#
+# Elite's Journal files (~/.local/share/Steam/steamapps/compatdata/*/pfx/drive_c/users/
+# steamuser/Saved Games/Frontier Developments/Elite Dangerous/*.log, or under Proton's
+# equivalent) are line-delimited JSON events and a natural fit for a small MCP server -
+# current system, docked station, cargo hold, nav route. Not written yet.
+
+[game]
+id = "elite-dangerous"
+name = "Elite Dangerous"
+detect = ["EliteDangerous64.exe", "EDLaunch.exe"]
+allowed_tools = ["Read"]
+
+system_prompt = """
+You are a live Elite Dangerous assistant. The commander is mid-flight and cannot read
+long text. Answer in at most 3 short sentences, no preamble, no markdown. Say plainly
+when you do not have live data (current system, cargo, credits) rather than guessing.
+"""
+
+vocabulary = [
+  "Elite Dangerous", "Frontier", "supercruise", "frameshift drive", "FSD", "hyperspace",
+  "hardpoints", "shield cell", "heat sink", "interdiction", "wake scanner",
+  "Thargoid", "Guardian", "engineer", "material trader", "powerplay", "Anaconda",
+  "Python", "Cutter", "Corvette", "Conda", "Fer-de-Lance", "Asp Explorer",
+  "Krait Phantom", "bounty voucher", "combat bond", "exploration data", "Elite rank",
+]
