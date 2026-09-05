@@ -34,7 +34,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent.parent
 MODULE_PATH = ROOT / "src" / "gamehail" / "games" / "star-citizen.toml"
 SNAPSHOT_PATH = ROOT / "src" / "gamehail" / "games" / "data" / "star-citizen.vocab.json"
-SCMCP_ENTRY = Path(os.environ.get("SCMCP_ENTRY", "")) or (Path.home() / "git" / "SCMCP" / "dist" / "index.js")
+# A Path object is truthy even when built from "" (it becomes Path(".")), so
+# `Path(os.environ.get(...)) or default` never falls through - that bug meant the
+# real default was silently unreachable unless SCMCP_ENTRY happened to be exported.
+SCMCP_ENTRY = Path(os.environ.get("SCMCP_ENTRY") or (Path.home() / "git" / "SCMCP" / "dist" / "index.js"))
 
 
 def _env_with_token() -> dict[str, str]:
@@ -48,7 +51,7 @@ def _env_with_token() -> dict[str, str]:
     return env
 
 
-def fetch_from_mcp(timeout: float = 30.0) -> list[str]:
+def fetch_from_mcp(timeout: float = 90.0) -> list[str]:
     """One-shot MCP call: initialize, call sc_get_vocabulary, take the result, exit."""
     node = shutil.which("node")
     if not node:
@@ -91,7 +94,23 @@ def fetch_from_mcp(timeout: float = 30.0) -> list[str]:
                 raise RuntimeError(f"sc_get_vocabulary failed: {msg['error']}")
             body = msg["result"]["content"][0]["text"]
             payload = json.loads(body)
-            return list(payload["terms"])
+            if payload.get("truncated"):
+                # sc_get_vocabulary said so honestly (SCMCP >= 1.4.1) - the caller must
+                # not treat a partial list as complete data for something whose whole
+                # purpose is completeness.
+                raise RuntimeError(f"sc_get_vocabulary truncated its response: "
+                                   f"{payload['truncated']}")
+            terms = list(payload["terms"])
+            claimed = payload.get("term_count")
+            if claimed is not None and claimed != len(terms):
+                # Belt and suspenders against the exact bug this once was: a
+                # term_count computed before an unsignalled truncation, so it no
+                # longer matched what the terms array actually held (2633 claimed,
+                # 658 delivered, no error and no truncated field to catch it on).
+                raise RuntimeError(
+                    f"sc_get_vocabulary claimed {claimed} terms but sent {len(terms)}"
+                )
+            return terms
     raise RuntimeError(
         f"no response to sc_get_vocabulary (exit {proc.returncode}): {proc.stderr[-500:]}"
     )
@@ -111,17 +130,34 @@ def save_snapshot(terms: list[str]) -> None:
     SNAPSHOT_PATH.write_text(json.dumps(sorted(terms), indent=2) + "\n")
 
 
+# Below this fraction of the existing snapshot, a fresh fetch is treated as suspect
+# rather than saved - a transient partial response from the wiki API must not silently
+# regress a good, committed vocabulary. (Once bitten: a fetch genuinely returned 658
+# terms against a wiki-side hiccup where three back-to-back retries all came back at
+# the full 2633, so this was a real, reproducible-enough failure mode, not a one-off.)
+MIN_KEEP_FRACTION = 0.7
+
+
 def resolve(refresh: bool) -> tuple[list[str], str]:
-    if not refresh and (snapshot := load_snapshot()):
-        return snapshot, "local snapshot"
+    existing = load_snapshot()
+    if not refresh and existing:
+        return existing, "local snapshot"
     try:
         terms = fetch_from_mcp()
     except (RuntimeError, OSError, subprocess.TimeoutExpired) as exc:
-        if snapshot := load_snapshot():
+        if existing:
             print(f"SCMCP unavailable ({exc}); using the existing local snapshot instead",
                   file=sys.stderr)
-            return snapshot, "local snapshot (MCP fallback failed)"
+            return existing, "local snapshot (MCP fallback failed)"
         raise RuntimeError(f"no local snapshot and SCMCP is unavailable: {exc}") from exc
+
+    if existing and len(terms) < len(existing) * MIN_KEEP_FRACTION:
+        print(f"fetched only {len(terms)} terms, well under the existing snapshot's "
+              f"{len(existing)} - looks like a partial response, not keeping it. "
+              "Pass --force to save it anyway if this is expected.", file=sys.stderr)
+        if "--force" not in sys.argv:
+            return existing, "local snapshot (suspiciously small refresh rejected)"
+
     save_snapshot(terms)
     return terms, "sc_get_vocabulary (snapshot refreshed)"
 
@@ -154,6 +190,8 @@ def main() -> int:
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--refresh", action="store_true",
                         help="skip the local snapshot and re-fetch via SCMCP")
+    parser.add_argument("--force", action="store_true",
+                        help="save a fresh fetch even if it looks suspiciously small")
     args = parser.parse_args()
 
     try:
